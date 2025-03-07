@@ -1,0 +1,70 @@
+.startMenu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 10;
+}
+
+.title {
+  font-size: 64px;
+  color: #fff;
+  margin-bottom: 30px;
+  text-shadow: 0 0 10px #88f, 0 0 20px #88f;
+}
+
+.instructions {
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 30px;
+  max-width: 400px;
+}
+
+.instructions h2 {
+  color: #fff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.instructions ul {
+  color: #fff;
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.instructions li {
+  margin: 8px 0;
+  text-align: center;
+}
+
+.highScore {
+  font-size: 24px;
+  color: #ff0;
+  margin-bottom: 20px;
+}
+
+.startButton {
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 24px;
+  margin: 4px 2px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background-color 0.3s;
+}
+
+.startButton:hover {
+  background-color: #45a049;
+}

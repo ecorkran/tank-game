@@ -1,0 +1,9 @@
+This file is a placeholder to ensure the sounds directory is created.
+The following sound files should be added to this directory:
+- shoot.mp3
+- explosion.mp3
+- hit.mp3
+- game-over.mp3
+- background.mp3
+- powerup.mp3
+- shield.mp3

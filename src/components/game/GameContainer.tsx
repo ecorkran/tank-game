@@ -10,7 +10,8 @@ import { generateObstacles } from '@/lib/obstacles';
 import { generateRandomPowerUp } from '@/lib/powerups';
 import { soundManager } from '@/lib/sounds';
 import { calculateWrappedPosition } from '@/utils/position';
-import { PLAYFIELD_DIMENSIONS, WRAPPING_THRESHOLDS } from '@/constants/game';
+import { checkObstacleCollision, findSafeSpawnPosition, isStuckAgainstObstacle } from '@/utils/collision';
+import { PLAYFIELD_DIMENSIONS, WRAPPING_THRESHOLDS, SIZES, GAMEPLAY } from '@/constants/game';
 import styles from '@/styles/GameContainer.module.css';
 
 // Initial game state
@@ -131,14 +132,44 @@ const GameContainer: React.FC = () => {
     // Reset game state with new obstacles
     const newObstacles = generateObstacles(dimensions.width, dimensions.height, 8);
     
-    // Create initial enemies at opposite corners
+    // Find a safe spawn position for the player that doesn't collide with obstacles
+    const safePlayerPosition = findSafeSpawnPosition(
+      dimensions.width,
+      dimensions.height,
+      SIZES.player,
+      newObstacles,
+      100 // Margin from edges
+    );
+    
+    // Create initial enemies at safe positions
+    // Find safe spawn positions for enemies that don't collide with obstacles
+    const safeEnemyPosition1 = findSafeSpawnPosition(
+      dimensions.width,
+      dimensions.height,
+      SIZES.enemy,
+      newObstacles,
+      100 // Margin from edges
+    );
+    
+    const safeEnemyPosition2 = findSafeSpawnPosition(
+      dimensions.width,
+      dimensions.height,
+      SIZES.enemy,
+      newObstacles,
+      100 // Margin from edges
+    );
+    
     const initialEnemies = [
-      createEnemy({ x: 100, y: dimensions.height - 100 }, dimensions.width, dimensions.height),
-      createEnemy({ x: dimensions.width - 100, y: 100 }, dimensions.width, dimensions.height)
+      createEnemy(safeEnemyPosition1, dimensions.width, dimensions.height),
+      createEnemy(safeEnemyPosition2, dimensions.width, dimensions.height)
     ];
     
     setGameState({
       ...initialGameState,
+      player: {
+        ...initialGameState.player,
+        position: safePlayerPosition
+      },
       obstacles: newObstacles,
       enemies: initialEnemies
     });
@@ -172,31 +203,50 @@ const GameContainer: React.FC = () => {
     
     const spawnEnemy = () => {
       setGameState(prevState => {
-        // Don't spawn more than 5 enemies
-        if (prevState.enemies.length >= 5) return prevState;
+        // Don't spawn more than MAX_ENEMIES
+        if (prevState.enemies.length >= GAMEPLAY.MAX_ENEMIES) return prevState;
         
-        // Spawn enemy at random edge position
-        let position;
+        // Find a safe spawn position for the enemy that doesn't collide with obstacles
+        // First try to spawn at the edges
+        let initialPosition;
         const side = Math.floor(Math.random() * 4);
         
         switch (side) {
           case 0: // Top
-            position = { x: Math.random() * dimensions.width, y: 0 };
+            initialPosition = { x: Math.random() * dimensions.width, y: 0 };
             break;
           case 1: // Right
-            position = { x: dimensions.width, y: Math.random() * dimensions.height };
+            initialPosition = { x: dimensions.width, y: Math.random() * dimensions.height };
             break;
           case 2: // Bottom
-            position = { x: Math.random() * dimensions.width, y: dimensions.height };
+            initialPosition = { x: Math.random() * dimensions.width, y: dimensions.height };
             break;
           case 3: // Left
-            position = { x: 0, y: Math.random() * dimensions.height };
+            initialPosition = { x: 0, y: Math.random() * dimensions.height };
             break;
           default:
-            position = { x: 0, y: 0 };
+            initialPosition = { x: 0, y: 0 };
         }
         
-        const newEnemy = createEnemy(position, dimensions.width, dimensions.height);
+        // Move the initial position slightly inward to avoid immediate wrapping
+        if (side === 0) initialPosition.y += SIZES.enemy;
+        if (side === 1) initialPosition.x -= SIZES.enemy;
+        if (side === 2) initialPosition.y -= SIZES.enemy;
+        if (side === 3) initialPosition.x += SIZES.enemy;
+        
+        // Check if the initial position is safe
+        const initialCollision = checkObstacleCollision(
+          initialPosition,
+          SIZES.enemy,
+          prevState.obstacles
+        );
+        
+        // If the initial position is safe, use it; otherwise find a safe position
+        const safePosition = initialCollision.collided 
+          ? findSafeSpawnPosition(dimensions.width, dimensions.height, SIZES.enemy, prevState.obstacles, 50)
+          : initialPosition;
+        
+        const newEnemy = createEnemy(safePosition, dimensions.width, dimensions.height);
         
         return {
           ...prevState,
@@ -279,35 +329,7 @@ const GameContainer: React.FC = () => {
     );
   };
   
-  const checkObstacleCollision = (
-    position: Position, 
-    size: number, 
-    obstacles: GameObject[]
-  ): { collided: boolean; collidedX: boolean; collidedY: boolean } => {
-    let collidedX = false;
-    let collidedY = false;
-    
-    for (const obstacle of obstacles) {
-      const halfWidth = size/2 + obstacle.width/2;
-      const halfHeight = size/2 + obstacle.height/2;
-      
-      const dx = Math.abs(position.x - obstacle.position.x);
-      const dy = Math.abs(position.y - obstacle.position.y);
-      
-      if (dx < halfWidth && dy < halfHeight) {
-        // Collision detected
-        collidedX = dx < halfWidth;
-        collidedY = dy < halfHeight;
-        break;
-      }
-    }
-    
-    return {
-      collided: collidedX || collidedY,
-      collidedX,
-      collidedY
-    };
-  };
+  // Note: checkObstacleCollision has been moved to utils/collision.ts
   
   // Main game loop
   useEffect(() => {
@@ -385,6 +407,39 @@ const GameContainer: React.FC = () => {
           // Allow sliding along obstacles
           if (!obstacleCollision.collidedX) player.position.x += dx;
           if (!obstacleCollision.collidedY) player.position.y += dy;
+          
+          // Check if player is stuck (can't move forward or backward)
+          const isStuck = isStuckAgainstObstacle(
+            player.position,
+            player.width,
+            player.rotation,
+            newState.obstacles
+          );
+          
+          // If player is stuck, try to help them get unstuck by applying a small nudge
+          if (isStuck && (keys['w'] || keys['s'] || keys['arrowup'] || keys['arrowdown'])) {
+            // Calculate perpendicular direction to try to nudge the player
+            const perpX = Math.sin(player.rotation) * 2;
+            const perpY = -Math.cos(player.rotation) * 2;
+            
+            // Try nudging in both perpendicular directions
+            const nudgePos1 = { x: player.position.x + perpX, y: player.position.y + perpY };
+            const nudgePos2 = { x: player.position.x - perpX, y: player.position.y - perpY };
+            
+            const collision1 = checkObstacleCollision(nudgePos1, player.width, newState.obstacles);
+            const collision2 = checkObstacleCollision(nudgePos2, player.width, newState.obstacles);
+            
+            // Apply the nudge if one direction is clear
+            if (!collision1.collided) {
+              player.position.x = nudgePos1.x;
+              player.position.y = nudgePos1.y;
+              console.log('Unstuck player with nudge direction 1');
+            } else if (!collision2.collided) {
+              player.position.x = nudgePos2.x;
+              player.position.y = nudgePos2.y;
+              console.log('Unstuck player with nudge direction 2');
+            }
+          }
         }
         
         // Screen edge wrapping - match the enemy wrapping code exactly
@@ -434,7 +489,8 @@ const GameContainer: React.FC = () => {
             height: 5,
             speed: 10,
             damage: 20,
-            isActive: true
+            isActive: true,
+            distanceTraveled: 0
           };
           
           newState.projectiles.push(projectile);
@@ -477,7 +533,7 @@ const GameContainer: React.FC = () => {
             const distance = Math.sqrt(dx * dx + dy * dy);
             
             // Fire if within range (with some randomness)
-            if (distance < 300 && Math.random() < 0.3) {
+            if (distance < GAMEPLAY.SHOT_RANGE && Math.random() < 0.3) {
               const projectile: Projectile = {
                 position: {
                   x: updatedEnemy.position.x + Math.cos(updatedEnemy.rotation) * 30,
@@ -488,7 +544,8 @@ const GameContainer: React.FC = () => {
                 height: 5,
                 speed: 7,
                 damage: 10,
-                isActive: true
+                isActive: true,
+                distanceTraveled: 0
               };
               
               newState.projectiles.push(projectile);
@@ -507,9 +564,24 @@ const GameContainer: React.FC = () => {
           .map(projectile => {
             if (!projectile.isActive) return projectile;
             
+            // Calculate movement vector
+            const moveX = Math.cos(projectile.rotation) * projectile.speed;
+            const moveY = Math.sin(projectile.rotation) * projectile.speed;
+            
+            // Calculate distance traveled in this step
+            const stepDistance = Math.sqrt(moveX * moveX + moveY * moveY);
+            
+            // Update total distance traveled
+            const totalDistance = (projectile.distanceTraveled || 0) + stepDistance;
+            
+            // Check if projectile has exceeded max range
+            if (totalDistance > GAMEPLAY.SHOT_RANGE) {
+              return { ...projectile, isActive: false };
+            }
+            
             let newPosition = {
-              x: projectile.position.x + Math.cos(projectile.rotation) * projectile.speed,
-              y: projectile.position.y + Math.sin(projectile.rotation) * projectile.speed
+              x: projectile.position.x + moveX,
+              y: projectile.position.y + moveY
             };
             
             // Apply position wrapping using our utility function
@@ -538,7 +610,8 @@ const GameContainer: React.FC = () => {
             
             return {
               ...projectile,
-              position: newPosition
+              position: newPosition,
+              distanceTraveled: totalDistance
             };
           })
           .filter(projectile => projectile.isActive);

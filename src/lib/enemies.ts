@@ -1,6 +1,7 @@
 import { Tank, Position } from '@/types/game';
 import { calculateWrappedPosition } from '@/utils/position';
-import { WRAPPING_THRESHOLDS } from '@/constants/game';
+import { checkObstacleCollision, isStuckAgainstObstacle } from '@/utils/collision';
+import { WRAPPING_THRESHOLDS, SIZES, GAMEPLAY } from '@/constants/game';
 
 export const createEnemy = (
   position: Position, 
@@ -10,12 +11,12 @@ export const createEnemy = (
   return {
     position,
     rotation: Math.random() * Math.PI * 2,
-    width: 40,
-    height: 40,
+    width: SIZES.enemy,
+    height: SIZES.enemy,
     health: 50,
     maxHealth: 50,
-    speed: 1.2 + Math.random() * 0.8, // Increased speed so movement is more obvious
-    rotationSpeed: 0.03, // Fixed rotation speed for more predictable turning
+    speed: GAMEPLAY.ENEMY_SPEED_MIN + Math.random() * (GAMEPLAY.ENEMY_SPEED_MAX - GAMEPLAY.ENEMY_SPEED_MIN),
+    rotationSpeed: GAMEPLAY.ENEMY_ROTATION_SPEED,
     cooldown: Math.floor(Math.random() * 60),
     maxCooldown: 120,
     isPlayer: false
@@ -73,39 +74,73 @@ export const updateEnemy = (
   }
   
   // ALWAYS MOVE FORWARD - no random chance
-  // We'll always move forward unless there's an obstacle
   const shouldMove = true;
   
   if (shouldMove) {
-    const newPosX = newEnemy.position.x + Math.cos(newEnemy.rotation) * newEnemy.speed;
-    const newPosY = newEnemy.position.y + Math.sin(newEnemy.rotation) * newEnemy.speed;
+    // Calculate movement direction based on tank's rotation - exactly like player movement
+    const moveX = Math.cos(newEnemy.rotation) * newEnemy.speed;
+    const moveY = Math.sin(newEnemy.rotation) * newEnemy.speed;
     
-    // Check for obstacle collisions
-    let canMove = true;
+    // Check obstacle collisions BEFORE moving - exactly like player movement
+    const obstacleCollision = checkObstacleCollision(
+      { x: newEnemy.position.x + moveX, y: newEnemy.position.y + moveY },
+      newEnemy.width,
+      obstacles
+    );
     
-    for (const obstacle of obstacles) {
-      const dx = Math.abs(newPosX - obstacle.position.x);
-      const dy = Math.abs(newPosY - obstacle.position.y);
-      const collisionDist = newEnemy.width/2 + obstacle.width/2;
-      
-      if (dx < collisionDist && dy < collisionDist) {
-        canMove = false;
-        break;
-      }
-    }
-    
-    if (canMove) {
-      newEnemy.position.x = newPosX;
-      newEnemy.position.y = newPosY;
+    // Apply movement with obstacle sliding - exactly like player movement
+    if (!obstacleCollision.collided) {
+      // No collision, move normally
+      newEnemy.position.x += moveX;
+      newEnemy.position.y += moveY;
     } else {
-      // If collision detected, pick a specific new direction instead of random jitter
-      // Turn perpendicular to obstacle
-      const currentAngle = newEnemy.rotation;
-      const turnAngles = [Math.PI/2, -Math.PI/2, Math.PI]; // 90° left, 90° right, or 180°
+      // Allow sliding along obstacles
+      if (!obstacleCollision.collidedX) {
+        newEnemy.position.x += moveX;
+      }
       
-      // Pick one of the angles based on current time to avoid random jitter
-      const angleIndex = Math.floor(currentTime / 1000) % turnAngles.length;
-      newEnemy.targetRotation = currentAngle + turnAngles[angleIndex];
+      if (!obstacleCollision.collidedY) {
+        newEnemy.position.y += moveY;
+      }
+      
+      // Check if enemy is stuck (can't move forward)
+      const isStuck = isStuckAgainstObstacle(
+        newEnemy.position,
+        newEnemy.width,
+        newEnemy.rotation,
+        obstacles
+      );
+      
+      // If enemy is stuck or completely blocked, try to get unstuck or change direction
+      if (isStuck || (obstacleCollision.collidedX && obstacleCollision.collidedY)) {
+        // Calculate perpendicular directions to try to nudge the enemy
+        const perpX = Math.sin(newEnemy.rotation) * 2;
+        const perpY = -Math.cos(newEnemy.rotation) * 2;
+        
+        // Try nudging in both perpendicular directions
+        const nudgePos1 = { x: newEnemy.position.x + perpX, y: newEnemy.position.y + perpY };
+        const nudgePos2 = { x: newEnemy.position.x - perpX, y: newEnemy.position.y - perpY };
+        
+        const collision1 = checkObstacleCollision(nudgePos1, newEnemy.width, obstacles);
+        const collision2 = checkObstacleCollision(nudgePos2, newEnemy.width, obstacles);
+        
+        // Apply the nudge if one direction is clear
+        if (!collision1.collided) {
+          newEnemy.position.x = nudgePos1.x;
+          newEnemy.position.y = nudgePos1.y;
+        } else if (!collision2.collided) {
+          newEnemy.position.x = nudgePos2.x;
+          newEnemy.position.y = nudgePos2.y;
+        } else {
+          // If still stuck, change direction significantly
+          const currentAngle = newEnemy.rotation;
+          const turnAngles = [Math.PI/2, -Math.PI/2, Math.PI]; // 90° left, 90° right, or 180°
+          
+          // Pick one of the angles based on current time to avoid random jitter
+          const angleIndex = Math.floor(currentTime / 1000) % turnAngles.length;
+          newEnemy.targetRotation = currentAngle + turnAngles[angleIndex];
+        }
+      }
     }
   }
   

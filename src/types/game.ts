@@ -25,6 +25,7 @@ export interface Projectile extends GameObject {
   speed: number;
   damage: number;
   isActive: boolean;
+  distanceTraveled?: number; // Track how far the projectile has traveled
 }
 
 export interface Obstacle extends GameObject {

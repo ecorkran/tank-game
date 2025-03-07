@@ -28,10 +28,29 @@ export const WRAPPING_THRESHOLDS = {
 };
 
 export const GAMEPLAY = {
+  // Player constants
+  PLAYER_SPEED: 2.5,  // Increased from 1.5 to make it more noticeable
+  PLAYER_ROTATION_SPEED: 0.08,
+  
+  // Enemy spawning
   ENEMY_SPAWN_INTERVAL: 2000,
   MAX_ENEMIES: 5,
-  ENEMY_SPEED_MIN: 0.8,
-  ENEMY_SPEED_MAX: 1.2,
+  
+  // Enemy movement
+  ENEMY_SPEED_MIN: 0.6,  // Starting minimum speed (slower than player)
+  ENEMY_SPEED_MAX: 1.2,  // Starting maximum speed (slower than player)
   ENEMY_ROTATION_SPEED: 0.03,
-  SHOT_RANGE: 420
+  
+  // Enemy speed progression
+  ENEMY_SPEED_INCREASE_PER_KILL: 0.02,  // How much to increase speed per enemy killed
+  ENEMY_SPEED_MAX_CAP: 2.0,  // Maximum possible enemy speed after increases
+  ENEMY_SPEED_RANDOMNESS: 0.1,  // Random variation in speed increase
+  ENEMY_POINT_VALUE: 150,
+  ENEMY_POINT_MULTIPLER: 1.0,
+  ENEMY_RAM_MULTIPLIER: 0.8,
+  
+  // Projectiles
+  SHOT_RANGE: 420,
+
+  DEBUG_OUTPUT: false,
 };

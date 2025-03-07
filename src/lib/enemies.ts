@@ -6,8 +6,23 @@ import { WRAPPING_THRESHOLDS, SIZES, GAMEPLAY } from '@/constants/game';
 export const createEnemy = (
   position: Position, 
   canvasWidth: number, 
-  canvasHeight: number
+  canvasHeight: number,
+  speedIncrease: number = 0 // New parameter for progressive difficulty
 ): Tank => {
+  // Calculate base speed range with the speed increase applied
+  const minSpeed = Math.min(
+    GAMEPLAY.ENEMY_SPEED_MIN + speedIncrease, 
+    GAMEPLAY.ENEMY_SPEED_MAX_CAP
+  );
+  
+  const maxSpeed = Math.min(
+    GAMEPLAY.ENEMY_SPEED_MAX + speedIncrease, 
+    GAMEPLAY.ENEMY_SPEED_MAX_CAP
+  );
+  
+  // Calculate random speed within the adjusted range
+  const speed = minSpeed + Math.random() * (maxSpeed - minSpeed);
+  
   return {
     position,
     rotation: Math.random() * Math.PI * 2,
@@ -15,7 +30,7 @@ export const createEnemy = (
     height: SIZES.enemy,
     health: 50,
     maxHealth: 50,
-    speed: GAMEPLAY.ENEMY_SPEED_MIN + Math.random() * (GAMEPLAY.ENEMY_SPEED_MAX - GAMEPLAY.ENEMY_SPEED_MIN),
+    speed,
     rotationSpeed: GAMEPLAY.ENEMY_ROTATION_SPEED,
     cooldown: Math.floor(Math.random() * 60),
     maxCooldown: 120,
@@ -93,8 +108,11 @@ export const updateEnemy = (
       // No collision, move normally
       newEnemy.position.x += moveX;
       newEnemy.position.y += moveY;
+    } else if (obstacleCollision.correctedPosition) {
+      // Use the corrected position from collision detection to prevent penetration
+      newEnemy.position = obstacleCollision.correctedPosition;
     } else {
-      // Allow sliding along obstacles
+      // Fallback to sliding behavior if no corrected position is available
       if (!obstacleCollision.collidedX) {
         newEnemy.position.x += moveX;
       }

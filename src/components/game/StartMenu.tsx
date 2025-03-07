@@ -11,14 +11,13 @@ interface StartMenuProps {
 const StartMenu: React.FC<StartMenuProps> = ({ onStartGame, highScore }) => {
   return (
     <div className={styles.startMenu}>
-      <h1 className={styles.title}>TANK BATTLE</h1>
+      <h1 className={styles.title}>MANTA'S TANK BATTLE</h1>
       
       <div className={styles.instructions}>
         <h2>How to Play</h2>
         <ul>
           <li>Move with WASD or Arrow Keys</li>
-          <li>Aim with Mouse</li>
-          <li>Fire with Left Click</li>
+          <li>Fire with Space or Left Click</li>
           <li>Destroy enemy tanks to score points</li>
           <li>Avoid enemy fire</li>
           <li>Collect power-ups for advantages</li>

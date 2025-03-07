@@ -23,8 +23,8 @@ const initialGameState: GameState = {
     height: 40,
     health: 100,
     maxHealth: 100,
-    speed: 1.5,
-    rotationSpeed: 0.08,
+    speed: GAMEPLAY.PLAYER_SPEED,
+    rotationSpeed: GAMEPLAY.PLAYER_ROTATION_SPEED,
     cooldown: 0,
     maxCooldown: 30,
     isPlayer: true
@@ -69,6 +69,8 @@ const GameContainer: React.FC = () => {
   const [gameScreen, setGameScreen] = useState<GameScreen>('start');
   // Ref to track enemy count without causing rerenders
   const enemyCountRef = useRef<number>(0);
+  // Track enemy speed increase as the game progresses
+  const [enemySpeedIncrease, setEnemySpeedIncrease] = useState<number>(0);
   const [highScore, setHighScore] = useState<number>(0);
   
   // Fixed dimensions to prevent hydration mismatch
@@ -160,8 +162,8 @@ const GameContainer: React.FC = () => {
     );
     
     const initialEnemies = [
-      createEnemy(safeEnemyPosition1, dimensions.width, dimensions.height),
-      createEnemy(safeEnemyPosition2, dimensions.width, dimensions.height)
+      createEnemy(safeEnemyPosition1, dimensions.width, dimensions.height, enemySpeedIncrease),
+      createEnemy(safeEnemyPosition2, dimensions.width, dimensions.height, enemySpeedIncrease)
     ];
     
     setGameState({
@@ -246,7 +248,8 @@ const GameContainer: React.FC = () => {
           ? findSafeSpawnPosition(dimensions.width, dimensions.height, SIZES.enemy, prevState.obstacles, 50)
           : initialPosition;
         
-        const newEnemy = createEnemy(safePosition, dimensions.width, dimensions.height);
+        // Create enemy with current speed increase for progressive difficulty
+        const newEnemy = createEnemy(safePosition, dimensions.width, dimensions.height, enemySpeedIncrease);
         
         return {
           ...prevState,
@@ -403,8 +406,11 @@ const GameContainer: React.FC = () => {
         if (!obstacleCollision.collided) {
           player.position.x += dx;
           player.position.y += dy;
+        } else if (obstacleCollision.correctedPosition) {
+          // Use the corrected position from collision detection to prevent penetration
+          player.position = obstacleCollision.correctedPosition;
         } else {
-          // Allow sliding along obstacles
+          // Fallback to sliding behavior if no corrected position is available
           if (!obstacleCollision.collidedX) player.position.x += dx;
           if (!obstacleCollision.collidedY) player.position.y += dy;
           
@@ -644,9 +650,15 @@ const GameContainer: React.FC = () => {
                 }
               }
               
-              // If enemy is killed by projectile, increase score
+              // If enemy is killed by projectile, increase score and enemy speed
               if (enemy.health <= 0) {
-                newState.score += 100; // Standard points for projectile kill
+                newState.score += GAMEPLAY.ENEMY_POINT_VALUE * GAMEPLAY.ENEMY_POINT_MULTIPLER; // Points for projectile kill
+                
+                // Increase enemy speed for progressive difficulty
+                const randomVariation = (Math.random() * 2 - 1) * GAMEPLAY.ENEMY_SPEED_RANDOMNESS;
+                const speedIncrease = GAMEPLAY.ENEMY_SPEED_INCREASE_PER_KILL + randomVariation;
+                setEnemySpeedIncrease(prev => Math.min(prev + speedIncrease, GAMEPLAY.ENEMY_SPEED_MAX_CAP));
+                
                 return { ...enemy, health: 0 };
               }
             }
@@ -700,8 +712,17 @@ const GameContainer: React.FC = () => {
             const damageMitigation = 0.30;
             
             // Apply damage to both tanks
-            updatedPlayerHealth.health -= (collisionDamage * (1.0 - damageMitigation));
-            enemy.health -= collisionDamage;
+            // Check if player has shield active
+            if (newState.powerUpEffects.shield) {
+              // Shield absorbs all damage to player
+              if (soundManager) soundManager.play('shield');
+              // Enemy still takes full damage
+              enemy.health -= collisionDamage;
+            } else {
+              // Normal damage to both
+              updatedPlayerHealth.health -= (collisionDamage * (1.0 - damageMitigation));
+              enemy.health -= collisionDamage;
+            }
             
             // Simplified physics - push away from each other
             const dx = player.position.x - enemy.position.x;
@@ -723,8 +744,13 @@ const GameContainer: React.FC = () => {
             // Check if enemy is destroyed by the collision
             if (enemy.health <= 0) {
               // Award points for destroying enemy by ramming
-              newState.score += 150; // Bonus points for ramming kill!
+              newState.score += GAMEPLAY.ENEMY_POINT_VALUE * GAMEPLAY.ENEMY_POINT_MULTIPLER * GAMEPLAY.ENEMY_RAM_MULTIPLIER; // Points for ramming kill
               if (soundManager) soundManager.play('explosion');
+              
+              // Increase enemy speed for progressive difficulty
+              const randomVariation = (Math.random() * 2 - 1) * GAMEPLAY.ENEMY_SPEED_RANDOMNESS;
+              const speedIncrease = GAMEPLAY.ENEMY_SPEED_INCREASE_PER_KILL + randomVariation;
+              setEnemySpeedIncrease(prev => Math.min(prev + speedIncrease, GAMEPLAY.ENEMY_SPEED_MAX_CAP));
             } else {
               // Just a hit sound for non-fatal collisions
               if (soundManager) soundManager.play('hit');
@@ -869,8 +895,8 @@ const GameContainer: React.FC = () => {
               // Only spawn if still no enemies
               if (state.enemies.length === 0) {
                 const newEnemies = [
-                  createEnemy({ x: 50, y: 50 }, dimensions.width, dimensions.height),
-                  createEnemy({ x: dimensions.width - 50, y: 50 }, dimensions.width, dimensions.height)
+                  createEnemy({ x: 50, y: 50 }, dimensions.width, dimensions.height, enemySpeedIncrease),
+                  createEnemy({ x: dimensions.width - 50, y: 50 }, dimensions.width, dimensions.height, enemySpeedIncrease)
                 ];
                 return {
                   ...state,
@@ -1099,13 +1125,15 @@ const GameContainer: React.FC = () => {
       ctx.fill();
       
       // Draw debug text showing player position
-      ctx.fillStyle = 'white';
-      ctx.font = '12px Arial';
-      ctx.textAlign = 'left';
-      ctx.fillText(`Player: x=${Math.round(gameState.player.position.x)}, y=${Math.round(gameState.player.position.y)}`, 10, 80);
-      ctx.fillText(`Width: ${dimensions.width}, Height: ${dimensions.height}`, 10, 95);
-      ctx.fillText(`Wrap thresholds: x < ${-gameState.player.width} or x > ${dimensions.width + gameState.player.width}`, 10, 110);
-      
+      if (GAMEPLAY.DEBUG_OUTPUT) {
+        ctx.fillStyle = 'white';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Player: x=${Math.round(gameState.player.position.x)}, y=${Math.round(gameState.player.position.y)}`, 10, 80);
+        ctx.fillText(`Width: ${dimensions.width}, Height: ${dimensions.height}`, 10, 95);
+        ctx.fillText(`Wrap thresholds: x < ${-gameState.player.width} or x > ${dimensions.width + gameState.player.width}`, 10, 110);
+      }
+              
       // Draw UI
       ctx.fillStyle = 'white';
       ctx.font = '16px Arial';

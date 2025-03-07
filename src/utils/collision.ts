@@ -11,12 +11,13 @@ export const checkObstacleCollision = (
   position: Position, 
   size: number, 
   obstacles: GameObject[]
-): { collided: boolean; collidedX: boolean; collidedY: boolean } => {
+): { collided: boolean; collidedX: boolean; collidedY: boolean; correctedPosition?: Position } => {
   let collidedX = false;
   let collidedY = false;
+  let correctedPosition: Position | undefined = undefined;
   
-  // Add a small safety margin to prevent edge cases
-  const safetyMargin = 0.1;
+  // Increase safety margin to be more conservative with collision detection
+  const safetyMargin = 1.0;
   
   for (const obstacle of obstacles) {
     const halfWidth = (size/2 + obstacle.width/2) + safetyMargin;
@@ -25,16 +26,28 @@ export const checkObstacleCollision = (
     const dx = Math.abs(position.x - obstacle.position.x);
     const dy = Math.abs(position.y - obstacle.position.y);
     
+    // Check if we're inside or touching the obstacle
     if (dx < halfWidth && dy < halfHeight) {
       // Calculate penetration depth on each axis
       const overlapX = halfWidth - dx;
       const overlapY = halfHeight - dy;
       
-      // Determine which axis has the smaller overlap (collision)
-      if (overlapX < overlapY) {
+      // Create a corrected position that pushes the object outside the obstacle
+      if (!correctedPosition) {
+        correctedPosition = { ...position };
+      }
+      
+      // Determine which axis has the smaller overlap and push out in that direction
+      if (overlapX <= overlapY) {
         collidedX = true;
+        // Push out horizontally in the correct direction
+        const pushDirection = position.x < obstacle.position.x ? -1 : 1;
+        correctedPosition.x = position.x + pushDirection * overlapX;
       } else {
         collidedY = true;
+        // Push out vertically in the correct direction
+        const pushDirection = position.y < obstacle.position.y ? -1 : 1;
+        correctedPosition.y = position.y + pushDirection * overlapY;
       }
       
       // If the overlap is very small on both axes, block movement on both
@@ -52,7 +65,8 @@ export const checkObstacleCollision = (
   return {
     collided: collidedX || collidedY,
     collidedX,
-    collidedY
+    collidedY,
+    correctedPosition: (collidedX || collidedY) ? correctedPosition : undefined
   };
 };
 

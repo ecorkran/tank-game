@@ -1,5 +1,6 @@
 import { Tank, Position } from '@/types/game';
 import { calculateWrappedPosition } from '@/utils/position';
+import { WRAPPING_THRESHOLDS } from '@/constants/game';
 
 export const createEnemy = (
   position: Position, 
@@ -109,11 +110,10 @@ export const updateEnemy = (
   }
   
   // Screen edge wrapping using the shared utility function
-  const L = 21; // Same threshold as player for consistency
   const wrappedPosition = calculateWrappedPosition(
     newEnemy.position.x, 
     newEnemy.position.y, 
-    L, 
+    WRAPPING_THRESHOLDS.enemy, 
     { width: canvasWidth, height: canvasHeight }
   );
   newEnemy.position.x = wrappedPosition.x;

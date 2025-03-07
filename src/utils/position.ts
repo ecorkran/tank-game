@@ -1,4 +1,5 @@
 // Position utility functions for the game
+import { PLAYFIELD_DIMENSIONS } from '@/constants/game';
 
 /**
  * Calculates a wrapped position for game objects when they reach screen boundaries
@@ -12,7 +13,7 @@ export const calculateWrappedPosition = (
   x: number, 
   y: number, 
   L: number, 
-  space: { width: number, height: number } = { width: 800, height: 600 } // Default fallback dimensions
+  space: { width: number, height: number } = PLAYFIELD_DIMENSIONS // Use constants for default dimensions
 ): { x: number, y: number } => {
   // Ensure space is defined and has width/height properties
   if (!space || typeof space.width !== 'number' || typeof space.height !== 'number') {

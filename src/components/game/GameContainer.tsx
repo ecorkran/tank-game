@@ -10,6 +10,7 @@ import { generateObstacles } from '@/lib/obstacles';
 import { generateRandomPowerUp } from '@/lib/powerups';
 import { soundManager } from '@/lib/sounds';
 import { calculateWrappedPosition } from '@/utils/position';
+import { PLAYFIELD_DIMENSIONS, WRAPPING_THRESHOLDS } from '@/constants/game';
 import styles from '@/styles/GameContainer.module.css';
 
 // Initial game state
@@ -70,10 +71,7 @@ const GameContainer: React.FC = () => {
   const [highScore, setHighScore] = useState<number>(0);
   
   // Fixed dimensions to prevent hydration mismatch
-  const [dimensions, setDimensions] = useState({ 
-    width: 800, 
-    height: 600 
-  });
+  const [dimensions, setDimensions] = useState(PLAYFIELD_DIMENSIONS);
   
   // Input handling
   const inputState = useInput();
@@ -84,8 +82,8 @@ const GameContainer: React.FC = () => {
     
     // Only adjust dimensions if window is smaller than our default
     const handleResize = () => {
-      const maxWidth = Math.min(800, window.innerWidth - 20);
-      const maxHeight = Math.min(600, window.innerHeight - 20);
+      const maxWidth = Math.min(PLAYFIELD_DIMENSIONS.width, window.innerWidth - 20);
+      const maxHeight = Math.min(PLAYFIELD_DIMENSIONS.height, window.innerHeight - 20);
       
       if (maxWidth !== dimensions.width || maxHeight !== dimensions.height) {
         setDimensions({
@@ -401,8 +399,12 @@ const GameContainer: React.FC = () => {
         }
         
         // Apply position wrapping using our utility function
-        const L = 21;
-        const wrappedPosition = calculateWrappedPosition(player.position.x, player.position.y, L, dimensions);
+        const wrappedPosition = calculateWrappedPosition(
+          player.position.x, 
+          player.position.y, 
+          WRAPPING_THRESHOLDS.player, 
+          dimensions
+        );
         player.position.x = wrappedPosition.x;
         player.position.y = wrappedPosition.y;
         
@@ -511,8 +513,12 @@ const GameContainer: React.FC = () => {
             };
             
             // Apply position wrapping using our utility function
-            const L = 5; // Projectiles are smaller than tanks, so use a smaller threshold
-            const wrappedPosition = calculateWrappedPosition(newPosition.x, newPosition.y, L, dimensions);
+            const wrappedPosition = calculateWrappedPosition(
+              newPosition.x, 
+              newPosition.y, 
+              WRAPPING_THRESHOLDS.projectile, 
+              dimensions
+            );
             newPosition.x = wrappedPosition.x;
             newPosition.y = wrappedPosition.y;
             

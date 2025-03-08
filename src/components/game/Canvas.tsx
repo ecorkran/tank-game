@@ -8,17 +8,23 @@ interface CanvasProps {
   width?: number;
   height?: number;
   onClick?: (e: React.MouseEvent<HTMLCanvasElement>) => void;
+  className?: string;
+  id?: string;
 }
 
-const Canvas: React.FC<CanvasProps> = ({ draw, width, height, onClick }) => {
+const Canvas: React.FC<CanvasProps> = ({ draw, width, height, onClick, className, id }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      return;
+    }
     
     const context = canvas.getContext('2d');
-    if (!context) return;
+    if (!context) {
+      return;
+    }
     
     let frameCount = 0;
     let animationFrameId: number;
@@ -39,10 +45,12 @@ const Canvas: React.FC<CanvasProps> = ({ draw, width, height, onClick }) => {
   return (
     <canvas 
       ref={canvasRef}
+      id={id}
       width={width || 800}
       height={height || 600}
-      className={styles.canvas}
+      className={className || styles.canvas}
       onClick={onClick}
+      onContextMenu={(e) => e.preventDefault()} // Disable right-click menu
     />
   );
 };

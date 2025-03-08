@@ -6,10 +6,11 @@ import { useInput } from '@/hooks/useInput';
 
 interface StartMenuProps {
   onStartGame: () => void;
+  onOpenControls: () => void;
   highScore: number;
 }
 
-const StartMenu: React.FC<StartMenuProps> = ({ onStartGame, highScore }) => {
+const StartMenu: React.FC<StartMenuProps> = ({ onStartGame, onOpenControls, highScore }) => {
   // Use the input hook to detect Enter key press
   const inputState = useInput();
   
@@ -27,11 +28,11 @@ const StartMenu: React.FC<StartMenuProps> = ({ onStartGame, highScore }) => {
       <div className={styles.instructions}>
         <h2>How to Play</h2>
         <ul>
-          <li>Move with WASD or Arrow Keys</li>
-          <li>Fire with Space or Left Click</li>
+          <li>Multiple control schemes available</li>
           <li>Destroy enemy tanks to score points</li>
           <li>Avoid enemy fire</li>
           <li>Collect power-ups for advantages</li>
+          <li>Click 'Controls' to customize your controls</li>
         </ul>
       </div>
       
@@ -41,12 +42,20 @@ const StartMenu: React.FC<StartMenuProps> = ({ onStartGame, highScore }) => {
         </div>
       )}
       
-      <button 
-        className={styles.startButton}
-        onClick={onStartGame}
-      >
-        Start Game
-      </button>
+      <div className={styles.buttonContainer}>
+        <button 
+          className={styles.startButton}
+          onClick={onStartGame}
+        >
+          Start Game
+        </button>
+        <button
+          className={styles.controlsButton}
+          onClick={onOpenControls}
+        >
+          Controls
+        </button>
+      </div>
       <p className={styles.hint}>Press <strong>Enter</strong>, <strong>Space</strong>, or click the button to start</p>
     </div>
   );

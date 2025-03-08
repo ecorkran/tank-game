@@ -3,7 +3,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Canvas from './Canvas';
 import StartMenu from './StartMenu';
+import ControlsMenu from './ControlsMenu';
+import EscapeMenu from './EscapeMenu';
 import { GameState, Tank, Projectile, GameObject, PowerUpType, Position } from '@/types/game';
+import { ControlSettings } from '@/types/controls';
 import { useInput } from '@/hooks/useInput';
 import { createEnemy, updateEnemy } from '@/lib/enemies';
 import { generateObstacles } from '@/lib/obstacles';
@@ -11,8 +14,10 @@ import { generateRandomPowerUp } from '@/lib/powerups';
 import { soundManager } from '@/lib/sounds';
 import { calculateWrappedPosition } from '@/utils/position';
 import { checkObstacleCollision, findSafeSpawnPosition, isStuckAgainstObstacle } from '@/utils/collision';
-import { PLAYFIELD_DIMENSIONS, WRAPPING_THRESHOLDS, SIZES, GAMEPLAY } from '@/constants/game';
+import { PLAYFIELD_DIMENSIONS, WRAPPING_THRESHOLDS, SIZES, GAMEPLAY, CONTROLS } from '@/constants/game';
 import styles from '@/styles/GameContainer.module.css';
+
+import { DEFAULT_CONTROL_SETTINGS } from '@/types/controls';
 
 // Initial game state
 const initialGameState: GameState = {
@@ -40,14 +45,15 @@ const initialGameState: GameState = {
     speed: 1,
     shield: false,
     rapidFire: false
-  }
+  },
+  controls: DEFAULT_CONTROL_SETTINGS
 };
 
 // Game screen states
-type GameScreen = 'start' | 'playing' | 'gameOver';
+type GameScreen = 'start' | 'playing' | 'paused' | 'gameOver';
 
-// Function to draw control instructions
-const drawControlsText = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+// Function to draw control instructions based on the current control scheme
+const drawControlsText = (ctx: CanvasRenderingContext2D, width: number, height: number, controlScheme: string) => {
   ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
   ctx.fillRect(width - 220, height - 120, 210, 110);
   
@@ -56,11 +62,21 @@ const drawControlsText = (ctx: CanvasRenderingContext2D, width: number, height: 
   ctx.textAlign = 'left';
   ctx.fillText('Controls:', width - 210, height - 95);
   ctx.font = '14px Arial';
-  ctx.fillText('W - Forward', width - 210, height - 75);
-  ctx.fillText('S - Backward', width - 210, height - 55);
-  ctx.fillText('A - Rotate Left', width - 210, height - 35);
-  ctx.fillText('D - Rotate Right', width - 210, height - 15);
-  ctx.fillText('Space/Click - Fire', width - 90, height - 75);
+  
+  if (controlScheme === 'keyboard') {
+    ctx.fillText('W - Forward', width - 210, height - 75);
+    ctx.fillText('S - Backward', width - 210, height - 55);
+    ctx.fillText('A - Rotate Left', width - 210, height - 35);
+    ctx.fillText('D - Rotate Right', width - 210, height - 15);
+    ctx.fillText('Space/Click - Fire', width - 90, height - 75);
+    ctx.fillText('ESC - Pause', width - 90, height - 55);
+  } 
+  else if (controlScheme === 'mouse') {
+    ctx.fillText('Move Mouse - Aim', width - 210, height - 75);
+    ctx.fillText('Mouse Distance - Move', width - 210, height - 55);
+    ctx.fillText('Mouse Click/Space - Fire', width - 210, height - 35);
+    ctx.fillText('ESC - Pause', width - 210, height - 15);
+  }
 };
 
 const GameContainer: React.FC = () => {
@@ -72,6 +88,10 @@ const GameContainer: React.FC = () => {
   // Track enemy speed increase as the game progresses
   const [enemySpeedIncrease, setEnemySpeedIncrease] = useState<number>(0);
   const [highScore, setHighScore] = useState<number>(0);
+  
+  // Menu states
+  const [showControlsMenu, setShowControlsMenu] = useState<boolean>(false);
+  const [showEscapeMenu, setShowEscapeMenu] = useState<boolean>(false);
   
   // Fixed dimensions to prevent hydration mismatch
   const [dimensions, setDimensions] = useState(PLAYFIELD_DIMENSIONS);
@@ -85,6 +105,29 @@ const GameContainer: React.FC = () => {
       handleRestartGame();
     }
   }, [gameScreen, inputState.enterPressed, inputState.spacePressed]);
+  
+  // Handle escape key for showing/hiding the escape menu
+  useEffect(() => {
+    const handleEscapeKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (gameScreen === 'playing') {
+          // Show escape menu and pause the game
+          setShowEscapeMenu(true);
+          setGameScreen('paused');
+        } else if (gameScreen === 'paused' && showEscapeMenu) {
+          // Hide escape menu and resume the game
+          setShowEscapeMenu(false);
+          setGameScreen('playing');
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleEscapeKey);
+    
+    return () => {
+      window.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [gameScreen, showEscapeMenu]);
   
   // Handle window resize - now using fixed dimensions to avoid hydration issues
   useEffect(() => {
@@ -113,12 +156,39 @@ const GameContainer: React.FC = () => {
     };
   }, []);
   
-  // Load high score from localStorage
+  // Load high score and control settings from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // Load high score
       const savedHighScore = localStorage.getItem('tankGameHighScore');
       if (savedHighScore) {
         setHighScore(parseInt(savedHighScore, 10));
+      }
+      
+      // Load control settings
+      const savedControlSettings = localStorage.getItem('tankGameControlSettings');
+      
+      if (savedControlSettings) {
+        try {
+          const parsedSettings = JSON.parse(savedControlSettings) as ControlSettings;
+          setGameState(prevState => ({
+            ...prevState,
+            controls: parsedSettings
+          }));
+        } catch (e) {
+          console.error('Failed to parse saved control settings:', e);
+          // If there's an error, ensure we use keyboard mode as default
+          setGameState(prevState => ({
+            ...prevState,
+            controls: DEFAULT_CONTROL_SETTINGS
+          }));
+        }
+      } else {
+        // If no saved settings, explicitly set to keyboard mode
+        setGameState(prevState => ({
+          ...prevState,
+          controls: DEFAULT_CONTROL_SETTINGS
+        }));
       }
     }
   }, []);
@@ -173,7 +243,8 @@ const GameContainer: React.FC = () => {
       createEnemy(safeEnemyPosition2, dimensions.width, dimensions.height, enemySpeedIncrease)
     ];
     
-    setGameState({
+    // Preserve the current control settings when starting a new game
+    setGameState(prevState => ({
       ...initialGameState,
       player: {
         ...initialGameState.player,
@@ -182,8 +253,9 @@ const GameContainer: React.FC = () => {
       },
       obstacles: newObstacles,
       enemies: initialEnemies,
-      projectiles: []  // Ensure projectiles are cleared
-    });
+      projectiles: [],  // Ensure projectiles are cleared
+      controls: prevState.controls // Preserve the user's control settings
+    }));
     
     setGameScreen('playing');
   };
@@ -217,6 +289,57 @@ const GameContainer: React.FC = () => {
       // Start a new game directly instead of going back to the start screen
       handleStartGame();
     }, 100);  // 100ms delay
+  };
+  
+  // Handle opening controls menu
+  const handleOpenControlsMenu = () => {
+    setShowControlsMenu(true);
+    
+    // Pause the game if it's currently playing
+    if (gameScreen === 'playing') {
+      setGameState(prevState => ({
+        ...prevState,
+        isPaused: true
+      }));
+    }
+  };
+  
+  // Handle showing controls menu
+  const handleShowControlsMenu = () => {
+    // Pause the game if it's currently playing
+    if (gameScreen === 'playing') {
+      setGameState(prevState => ({
+        ...prevState,
+        isPaused: true
+      }));
+    }
+    setShowControlsMenu(true);
+  };
+  
+  // Handle closing controls menu
+  const handleCloseControlsMenu = () => {
+    setShowControlsMenu(false);
+    
+    // Resume the game if it was playing before
+    if (gameScreen === 'playing') {
+      setGameState(prevState => ({
+        ...prevState,
+        isPaused: false
+      }));
+    }
+  };
+  
+  // Handle control settings change
+  const handleControlSettingsChange = (newSettings: ControlSettings) => {
+    setGameState(prevState => ({
+      ...prevState,
+      controls: newSettings
+    }));
+    
+    // Save control settings to localStorage for persistence
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tankGameControlSettings', JSON.stringify(newSettings));
+    }
   };
   
   // Spawn enemies at random intervals
@@ -397,22 +520,91 @@ const GameContainer: React.FC = () => {
         const newState = { ...prevState };
         
         // Player movement and rotation
-        const { keys, mousePosition } = inputState;
+        const { keys, mousePosition, mouseDown } = inputState;
         const player = { ...newState.player };
+        const controlScheme = newState.controls.scheme;
+        const mouseSensitivity = newState.controls.mouseSensitivity;
+        const invertY = newState.controls.invertY;
         
         // Calculate movement direction based on tank's rotation
         let dx = 0;
         let dy = 0;
         
-        // Forward and backward movement relative to tank rotation
-        if (keys['w'] || keys['arrowup']) {
-          dx += Math.cos(player.rotation) * player.speed * newState.powerUpEffects.speed;
-          dy += Math.sin(player.rotation) * player.speed * newState.powerUpEffects.speed;
+        // Handle different control schemes
+        if (controlScheme === 'keyboard') {
+          // Forward and backward movement relative to tank rotation
+          if (keys['w'] || keys['arrowup']) {
+            dx += Math.cos(player.rotation) * player.speed * newState.powerUpEffects.speed;
+            dy += Math.sin(player.rotation) * player.speed * newState.powerUpEffects.speed;
+          }
+          if (keys['s'] || keys['arrowdown']) {
+            dx -= Math.cos(player.rotation) * player.speed * newState.powerUpEffects.speed;
+            dy -= Math.sin(player.rotation) * player.speed * newState.powerUpEffects.speed;
+          }
+          
+          // Rotation controls
+          if (keys['a'] || keys['arrowleft']) {
+            player.rotation -= player.rotationSpeed;
+          }
+          if (keys['d'] || keys['arrowright']) {
+            player.rotation += player.rotationSpeed;
+          }
+        } 
+        else if (controlScheme === 'mouse') {
+          // Mouse control mode - tank follows mouse cursor
+          const canvasElement = document.getElementById('gameCanvas') as HTMLCanvasElement;
+          const canvasRect = canvasElement?.getBoundingClientRect();
+          
+          if (canvasElement && canvasRect) {
+            // Get canvas scale factor (in case of CSS scaling)
+            const canvasScaleX = canvasElement.width / canvasRect.width;
+            const canvasScaleY = canvasElement.height / canvasRect.height;
+            
+            // Calculate mouse position relative to canvas with scaling
+            const relativeMouseX = (mousePosition.x - canvasRect.left) * canvasScaleX;
+            const relativeMouseY = (mousePosition.y - canvasRect.top) * canvasScaleY;
+            
+            // Calculate angle to mouse position
+            const angleToMouse = Math.atan2(
+              relativeMouseY - player.position.y,
+              relativeMouseX - player.position.x
+            );
+            
+            // Smooth rotation to reduce jitter
+            const rotationDiff = angleToMouse - player.rotation;
+            
+            // Handle angle wrapping
+            let normalizedDiff = rotationDiff;
+            if (rotationDiff > Math.PI) normalizedDiff -= Math.PI * 2;
+            if (rotationDiff < -Math.PI) normalizedDiff += Math.PI * 2;
+            
+            // Apply smoothed rotation (faster for better responsiveness)
+            player.rotation += normalizedDiff * 0.2;
+            
+            // Calculate distance to mouse
+            const distToMouse = Math.sqrt(
+              Math.pow(relativeMouseX - player.position.x, 2) + 
+              Math.pow(relativeMouseY - player.position.y, 2)
+            );
+            
+            // Move toward mouse if it's far enough away
+            if (distToMouse > CONTROLS.MOUSE_DISTANCE_THRESHOLD) {
+              // Calculate speed based on distance to mouse
+              const speedFactor = Math.min(distToMouse / 150, 1); // Scale speed based on distance
+              const moveSpeed = player.speed * CONTROLS.MOUSE_FOLLOW_SPEED * speedFactor * newState.powerUpEffects.speed * mouseSensitivity;
+              
+              // Apply movement in the direction of the mouse
+              dx = Math.cos(angleToMouse) * moveSpeed;
+              dy = Math.sin(angleToMouse) * moveSpeed;
+              
+              // Apply inversion if needed
+              if (invertY) {
+                dy = -dy;
+              }
+            }
+          }
         }
-        if (keys['s'] || keys['arrowdown']) {
-          dx -= Math.cos(player.rotation) * player.speed * newState.powerUpEffects.speed;
-          dy -= Math.sin(player.rotation) * player.speed * newState.powerUpEffects.speed;
-        }
+        // Hybrid mode removed for simplicity
         
         // Test keys for screen edge teleportation to test wrapping
         // These keys will teleport the player to just outside the screen edges
@@ -439,14 +631,6 @@ const GameContainer: React.FC = () => {
           dx *= 5;
           dy *= 5;
           console.log("Speed boost active");
-        }
-        
-        // Rotation controls
-        if (keys['a'] || keys['arrowleft']) {
-          player.rotation -= player.rotationSpeed;
-        }
-        if (keys['d'] || keys['arrowright']) {
-          player.rotation += player.rotationSpeed;
         }
         
         // Check obstacle collisions
@@ -537,7 +721,13 @@ const GameContainer: React.FC = () => {
           ? Math.floor(player.maxCooldown / 3) 
           : player.maxCooldown;
         
-        if ((inputState.mouseDown || keys[' ']) && player.cooldown <= 0) {
+        // Allow firing with both space and mouse click in all control schemes
+        let shouldFire = false;
+        
+        // Fire with space or mouse click in any control scheme
+        shouldFire = (keys[' '] || inputState.mouseDown) && player.cooldown <= 0;
+        
+        if (shouldFire) {
           // Create new projectile
           const projectile: Projectile = {
             position: {
@@ -550,7 +740,8 @@ const GameContainer: React.FC = () => {
             speed: 10,
             damage: 20,
             isActive: true,
-            distanceTraveled: 0
+            distanceTraveled: 0,
+            owner: 'player'
           };
           
           newState.projectiles.push(projectile);
@@ -605,7 +796,8 @@ const GameContainer: React.FC = () => {
                 speed: 7,
                 damage: 10,
                 isActive: true,
-                distanceTraveled: 0
+                distanceTraveled: 0,
+                owner: 'enemy'
               };
               
               newState.projectiles.push(projectile);
@@ -1243,7 +1435,7 @@ const GameContainer: React.FC = () => {
       
       // Draw control instructions
       if (gameScreen === 'playing') {
-        drawControlsText(ctx, dimensions.width, dimensions.height);
+        drawControlsText(ctx, dimensions.width, dimensions.height, gameState.controls.scheme);
       }
       
       // Draw game over screen
@@ -1320,7 +1512,40 @@ const GameContainer: React.FC = () => {
       />
       
       {gameScreen === 'start' && (
-        <StartMenu onStartGame={handleStartGame} highScore={highScore} />
+        <StartMenu 
+          onStartGame={handleStartGame} 
+          highScore={highScore} 
+          onOpenControls={handleShowControlsMenu} 
+        />
+      )}
+
+      {showControlsMenu && (
+        <ControlsMenu
+          controlSettings={gameState.controls}
+          onClose={handleCloseControlsMenu}
+          onControlChange={handleControlSettingsChange}
+        />
+      )}
+      
+      {showEscapeMenu && (
+        <EscapeMenu
+          onResume={() => {
+            setShowEscapeMenu(false);
+            setGameScreen('playing');
+          }}
+          onMainMenu={() => {
+            setShowEscapeMenu(false);
+            setGameScreen('start');
+          }}
+          onExit={() => {
+            // In a web context, we can just redirect to a blank page or show a confirmation
+            if (window.confirm('Are you sure you want to exit the game?')) {
+              window.close();
+              // Fallback if window.close() doesn't work (most browsers block it)
+              window.location.href = 'about:blank';
+            }
+          }}
+        />
       )}
     </div>
   );

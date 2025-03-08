@@ -87,11 +87,21 @@ export const useInput = () => {
       }
     };
     
+    // Track the last time we updated mouse position to throttle updates
+    let lastMouseMoveTime = 0;
+    const mouseThrottleMs = 16; // ~60fps, which is more efficient
+    
     const handleMouseMove = (e: MouseEvent) => {
-      setInputState(prev => ({
-        ...prev,
-        mousePosition: { x: e.clientX, y: e.clientY }
-      }));
+      const now = Date.now();
+      // Only update if enough time has passed since last update
+      if (now - lastMouseMoveTime >= mouseThrottleMs) {
+        lastMouseMoveTime = now;
+        const newPosition = { x: e.clientX, y: e.clientY };
+        setInputState(prev => ({
+          ...prev,
+          mousePosition: newPosition
+        }));
+      }
     };
     
     const handleMouseDown = (e: MouseEvent) => {

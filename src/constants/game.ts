@@ -27,6 +27,17 @@ export const WRAPPING_THRESHOLDS = {
   projectile: 5
 };
 
+/**
+ * Control settings
+ */
+export const CONTROLS = {
+  MOUSE_SENSITIVITY_MIN: 0.5,
+  MOUSE_SENSITIVITY_MAX: 2.0,
+  MOUSE_SENSITIVITY_DEFAULT: 1.0,
+  MOUSE_DISTANCE_THRESHOLD: 15, // Minimum distance from tank to move when using mouse controls
+  MOUSE_FOLLOW_SPEED: 2.0,      // Speed multiplier when following mouse in mouse control mode
+};
+
 export const GAMEPLAY = {
   // Player constants
   PLAYER_SPEED: 2.5,  // Increased from 1.5 to make it more noticeable

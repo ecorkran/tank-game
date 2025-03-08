@@ -26,6 +26,7 @@ export interface Projectile extends GameObject {
   damage: number;
   isActive: boolean;
   distanceTraveled?: number; // Track how far the projectile has traveled
+  owner: 'player' | 'enemy'; // Track who fired the projectile
 }
 
 export interface Obstacle extends GameObject {
@@ -41,6 +42,8 @@ export interface PowerUp extends GameObject {
   isActive: boolean;
 }
 
+import { ControlSettings } from './controls';
+
 export interface GameState {
   player: Tank;
   enemies: Tank[];
@@ -55,4 +58,5 @@ export interface GameState {
     shield: boolean;
     rapidFire: boolean;
   };
+  controls: ControlSettings;
 }

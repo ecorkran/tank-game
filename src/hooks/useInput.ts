@@ -15,6 +15,10 @@ interface InputState {
   spacePressed: boolean;
 }
 
+interface InputStateWithReset extends InputState {
+  resetInput: () => void;
+}
+
 export const useInput = () => {
   const [inputState, setInputState] = useState<InputState>({
     keys: {},
@@ -23,6 +27,17 @@ export const useInput = () => {
     enterPressed: false,
     spacePressed: false
   });
+  
+  // Function to reset input state - useful for game restarts
+  const resetInput = () => {
+    setInputState({
+      keys: {},
+      mousePosition: { x: 0, y: 0 },
+      mouseDown: false,
+      enterPressed: false,
+      spacePressed: false
+    });
+  };
   
   useEffect(() => {
     // Don't run on server
@@ -110,5 +125,5 @@ export const useInput = () => {
     };
   }, []);
   
-  return inputState;
+  return { ...inputState, resetInput };
 };

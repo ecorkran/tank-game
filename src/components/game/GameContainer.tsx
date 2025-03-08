@@ -177,10 +177,12 @@ const GameContainer: React.FC = () => {
       ...initialGameState,
       player: {
         ...initialGameState.player,
-        position: safePlayerPosition
+        position: safePlayerPosition,
+        cooldown: 30  // Add initial cooldown to prevent immediate firing
       },
       obstacles: newObstacles,
-      enemies: initialEnemies
+      enemies: initialEnemies,
+      projectiles: []  // Ensure projectiles are cleared
     });
     
     setGameScreen('playing');
@@ -201,8 +203,20 @@ const GameContainer: React.FC = () => {
   
   // Handle restart game
   const handleRestartGame = () => {
-    // Start a new game directly instead of going back to the start screen
-    handleStartGame();
+    // Clear any existing projectiles and reset game state
+    setGameState(prevState => ({
+      ...prevState,
+      projectiles: []  // Clear all projectiles
+    }));
+    
+    // Reset input state to prevent key states from persisting
+    inputState.resetInput();
+    
+    // Add a small delay before starting a new game to prevent immediate firing
+    setTimeout(() => {
+      // Start a new game directly instead of going back to the start screen
+      handleStartGame();
+    }, 100);  // 100ms delay
   };
   
   // Spawn enemies at random intervals

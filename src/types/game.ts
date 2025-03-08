@@ -3,6 +3,13 @@ export interface Position {
   y: number;
 }
 
+export interface CollisionResult {
+  collided: boolean;
+  collidedX: boolean;
+  collidedY: boolean;
+  correctedPosition: Position | null;
+}
+
 export interface GameObject {
   position: Position;
   rotation: number;

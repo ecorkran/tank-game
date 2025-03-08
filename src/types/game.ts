@@ -66,4 +66,8 @@ export interface GameState {
     rapidFire: boolean;
   };
   controls: ControlSettings;
+  dimensions?: {
+    width: number;
+    height: number;
+  };
 }

@@ -280,19 +280,35 @@ const GameContainer: React.FC = () => {
       });
     };
     
-    // Spawn an enemy at intervals defined in constants
-    const randomEnemyInterval = GAMEPLAY.ENEMY_SPAWN_INTERVAL_MIN + Math.random() * (GAMEPLAY.ENEMY_SPAWN_INTERVAL_MAX - GAMEPLAY.ENEMY_SPAWN_INTERVAL_MIN);
-    const spawnInterval = setInterval(() => {
-      spawnEnemy();
-      // Also check if we need more enemies
-      if (enemyCountRef.current < GAMEPLAY.MIN_ENEMIES) {
-        console.log("Not enough enemies, forcing spawn");
+    // Use a recursive setTimeout approach to get a new random interval after each spawn
+    let enemySpawnTimer: NodeJS.Timeout;
+    
+    const scheduleEnemySpawn = () => {
+      // Calculate a new random interval each time
+      const randomEnemyInterval = GAMEPLAY.ENEMY_SPAWN_INTERVAL_MIN + Math.random() * (GAMEPLAY.ENEMY_SPAWN_INTERVAL_MAX - GAMEPLAY.ENEMY_SPAWN_INTERVAL_MIN);
+      
+      enemySpawnTimer = setTimeout(() => {
         spawnEnemy();
-      }
-    }, randomEnemyInterval);
+        
+        // Also check if we need more enemies
+        if (enemyCountRef.current < GAMEPLAY.MIN_ENEMIES) {
+          // No need for console log in production code
+          spawnEnemy();
+        }
+        
+        // Schedule the next spawn with a new random interval
+        scheduleEnemySpawn();
+      }, randomEnemyInterval);
+    };
+    
+    // Start the first enemy spawn cycle
+    scheduleEnemySpawn();
     
     return () => {
-      clearInterval(spawnInterval);
+      // Clean up the timeout when component unmounts or effect re-runs
+      if (enemySpawnTimer) {
+        clearTimeout(enemySpawnTimer);
+      }
     };
   }, [dimensions, gameScreen]);
   
@@ -326,14 +342,28 @@ const GameContainer: React.FC = () => {
       });
     };
     
-    // Spawn a power-up at intervals defined in constants
-    const randomInterval = GAMEPLAY.POWERUP_INTERVAL_MIN + Math.random() * (GAMEPLAY.POWERUP_INTERVAL_MAX - GAMEPLAY.POWERUP_INTERVAL_MIN);
-    const powerUpInterval = setInterval(() => {
-      spawnPowerUp();
-    }, randomInterval);
+    // Use a recursive setTimeout approach to get a new random interval after each spawn
+    let powerUpTimer: NodeJS.Timeout;
+    
+    const schedulePowerUpSpawn = () => {
+      // Calculate a new random interval each time
+      const randomInterval = GAMEPLAY.POWERUP_INTERVAL_MIN + Math.random() * (GAMEPLAY.POWERUP_INTERVAL_MAX - GAMEPLAY.POWERUP_INTERVAL_MIN);
+      
+      powerUpTimer = setTimeout(() => {
+        spawnPowerUp();
+        // Schedule the next spawn with a new random interval
+        schedulePowerUpSpawn();
+      }, randomInterval);
+    };
+    
+    // Start the first power-up spawn cycle
+    schedulePowerUpSpawn();
     
     return () => {
-      clearInterval(powerUpInterval);
+      // Clean up the timeout when component unmounts or effect re-runs
+      if (powerUpTimer) {
+        clearTimeout(powerUpTimer);
+      }
     };
   }, [gameScreen, dimensions]);
   

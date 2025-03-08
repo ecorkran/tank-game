@@ -42,21 +42,26 @@ export const GAMEPLAY = {
   ENEMY_SPEED_MIN: 0.20,  // Starting minimum speed (slower than player)
   ENEMY_SPEED_MAX: 0.80,  // Starting maximum speed (slower than player)
   ENEMY_ROTATION_SPEED: 0.02,
+  ENEMY_ROTATION_RANDOMNESS: 0.2,  // Rotation speed randomness factor (±20%)
+  
+  // Enemy attributes
+  ENEMY_BASE_HEALTH: 50,
+  ENEMY_HEALTH_RANDOMNESS: 0.2,  // Health randomness factor (±20%)
   
   // Enemy speed progression
   ENEMY_SPEED_INCREASE_PER_KILL: 0.02,  // How much to increase speed per enemy killed
   ENEMY_SPEED_MAX_CAP: 2.0,  // Maximum possible enemy speed after increases
-  ENEMY_SPEED_RANDOMNESS: 0.05,  // Random variation in speed increase
+  ENEMY_SPEED_RANDOMNESS: 0.02,  // Random variation in speed increase
   ENEMY_POINT_VALUE: 150,
   ENEMY_POINT_MULTIPLER: 1.0,
   ENEMY_RAM_MULTIPLIER: 0.8,
   
   // Projectiles
-  SHOT_RANGE: 550,
+  SHOT_RANGE: 600,
 
   // Power-up spawning
-  POWERUP_INTERVAL_MIN: 8000,  // Minimum time between power-up spawns (ms)
-  POWERUP_INTERVAL_MAX: 16000,  // Maximum time between power-up spawns (ms)
+  POWERUP_INTERVAL_MIN: 6000,  // Minimum time between power-up spawns (ms)
+  POWERUP_INTERVAL_MAX: 12000,  // Maximum time between power-up spawns (ms)
   MAX_ACTIVE_POWERUPS: 3,      // Maximum number of active power-ups at once
 
   // Game loop

@@ -79,6 +79,13 @@ const GameContainer: React.FC = () => {
   // Input handling
   const inputState = useInput();
   
+  // Listen for Enter key or Space bar on game over screen
+  useEffect(() => {
+    if (gameScreen === 'gameOver' && (inputState.enterPressed || inputState.spacePressed)) {
+      handleRestartGame();
+    }
+  }, [gameScreen, inputState.enterPressed, inputState.spacePressed]);
+  
   // Handle window resize - now using fixed dimensions to avoid hydration issues
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -194,7 +201,8 @@ const GameContainer: React.FC = () => {
   
   // Handle restart game
   const handleRestartGame = () => {
-    setGameScreen('start');
+    // Start a new game directly instead of going back to the start screen
+    handleStartGame();
   };
   
   // Spawn enemies at random intervals
@@ -258,15 +266,16 @@ const GameContainer: React.FC = () => {
       });
     };
     
-    // Spawn an enemy every 2-5 seconds
+    // Spawn an enemy at intervals defined in constants
+    const randomEnemyInterval = GAMEPLAY.ENEMY_SPAWN_INTERVAL_MIN + Math.random() * (GAMEPLAY.ENEMY_SPAWN_INTERVAL_MAX - GAMEPLAY.ENEMY_SPAWN_INTERVAL_MIN);
     const spawnInterval = setInterval(() => {
       spawnEnemy();
       // Also check if we need more enemies
-      if (enemyCountRef.current < 2) {
+      if (enemyCountRef.current < GAMEPLAY.MIN_ENEMIES) {
         console.log("Not enough enemies, forcing spawn");
         spawnEnemy();
       }
-    }, 2000 + Math.random() * 3000);
+    }, randomEnemyInterval);
     
     return () => {
       clearInterval(spawnInterval);
@@ -285,8 +294,8 @@ const GameContainer: React.FC = () => {
     
     const spawnPowerUp = () => {
       setGameState(prevState => {
-        // Limit to 3 active power-ups at a time
-        if (prevState.powerUps.filter(p => p.isActive).length >= 3) return prevState;
+        // Limit to MAX_ACTIVE_POWERUPS active power-ups at a time
+        if (prevState.powerUps.filter(p => p.isActive).length >= GAMEPLAY.MAX_ACTIVE_POWERUPS) return prevState;
         
         const newPowerUp = generateRandomPowerUp(
           dimensions.width, 
@@ -303,10 +312,11 @@ const GameContainer: React.FC = () => {
       });
     };
     
-    // Spawn a power-up every 15-30 seconds
+    // Spawn a power-up at intervals defined in constants
+    const randomInterval = GAMEPLAY.POWERUP_INTERVAL_MIN + Math.random() * (GAMEPLAY.POWERUP_INTERVAL_MAX - GAMEPLAY.POWERUP_INTERVAL_MIN);
     const powerUpInterval = setInterval(() => {
       spawnPowerUp();
-    }, 15000 + Math.random() * 15000);
+    }, randomInterval);
     
     return () => {
       clearInterval(powerUpInterval);
@@ -919,7 +929,7 @@ const GameContainer: React.FC = () => {
           powerUpEffects: updatedPowerUpEffects
         };
       });
-    }, 1000 / 60); // 60 FPS
+    }, 1000 / GAMEPLAY.GAME_FPS); // Game loop at specified FPS
     
     return () => {
       clearInterval(gameLoop);
@@ -1218,6 +1228,10 @@ const GameContainer: React.FC = () => {
         ctx.fillStyle = 'white';
         ctx.font = '20px Arial';
         ctx.fillText('Play Again', dimensions.width / 2, dimensions.height / 2 + 120);
+        
+        // Add hint about using Enter key or Space bar
+        ctx.font = '16px Arial';
+        ctx.fillText('Press Enter, Space, or click to restart', dimensions.width / 2, dimensions.height / 2 + 150);
       }
     }
   }, [gameState, dimensions, gameScreen, highScore]);

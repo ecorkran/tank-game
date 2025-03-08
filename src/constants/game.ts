@@ -33,13 +33,15 @@ export const GAMEPLAY = {
   PLAYER_ROTATION_SPEED: 0.08,
   
   // Enemy spawning
-  ENEMY_SPAWN_INTERVAL: 2000,
+  ENEMY_SPAWN_INTERVAL_MIN: 4000,  // Minimum time between enemy spawns (ms)
+  ENEMY_SPAWN_INTERVAL_MAX: 10000, // Maximum time between enemy spawns (ms)
   MAX_ENEMIES: 5,
+  MIN_ENEMIES: 2,       // Minimum number of enemies to maintain
   
   // Enemy movement
-  ENEMY_SPEED_MIN: 0.6,  // Starting minimum speed (slower than player)
-  ENEMY_SPEED_MAX: 1.2,  // Starting maximum speed (slower than player)
-  ENEMY_ROTATION_SPEED: 0.03,
+  ENEMY_SPEED_MIN: 0.25,  // Starting minimum speed (slower than player)
+  ENEMY_SPEED_MAX: 0.75,  // Starting maximum speed (slower than player)
+  ENEMY_ROTATION_SPEED: 0.02,
   
   // Enemy speed progression
   ENEMY_SPEED_INCREASE_PER_KILL: 0.02,  // How much to increase speed per enemy killed
@@ -50,7 +52,15 @@ export const GAMEPLAY = {
   ENEMY_RAM_MULTIPLIER: 0.8,
   
   // Projectiles
-  SHOT_RANGE: 420,
+  SHOT_RANGE: 550,
+
+  // Power-up spawning
+  POWERUP_INTERVAL_MIN: 10000,  // Minimum time between power-up spawns (ms)
+  POWERUP_INTERVAL_MAX: 20000,  // Maximum time between power-up spawns (ms)
+  MAX_ACTIVE_POWERUPS: 3,      // Maximum number of active power-ups at once
+
+  // Game loop
+  GAME_FPS: 60,            // Frames per second
 
   DEBUG_OUTPUT: false,
 };

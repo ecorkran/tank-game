@@ -11,13 +11,17 @@ interface InputState {
     y: number;
   };
   mouseDown: boolean;
+  enterPressed: boolean;
+  spacePressed: boolean;
 }
 
 export const useInput = () => {
   const [inputState, setInputState] = useState<InputState>({
     keys: {},
     mousePosition: { x: 0, y: 0 },
-    mouseDown: false
+    mouseDown: false,
+    enterPressed: false,
+    spacePressed: false
   });
   
   useEffect(() => {
@@ -25,17 +29,47 @@ export const useInput = () => {
     if (typeof window === 'undefined') return;
     
     const handleKeyDown = (e: KeyboardEvent) => {
-      setInputState(prev => ({
-        ...prev,
-        keys: { ...prev.keys, [e.key.toLowerCase()]: true }
-      }));
+      // Special handling for Enter key and Space bar
+      if (e.key === 'Enter') {
+        setInputState(prev => ({
+          ...prev,
+          keys: { ...prev.keys, [e.key.toLowerCase()]: true },
+          enterPressed: true
+        }));
+      } else if (e.key === ' ') {
+        setInputState(prev => ({
+          ...prev,
+          keys: { ...prev.keys, [e.key.toLowerCase()]: true },
+          spacePressed: true
+        }));
+      } else {
+        setInputState(prev => ({
+          ...prev,
+          keys: { ...prev.keys, [e.key.toLowerCase()]: true }
+        }));
+      }
     };
     
     const handleKeyUp = (e: KeyboardEvent) => {
-      setInputState(prev => ({
-        ...prev,
-        keys: { ...prev.keys, [e.key.toLowerCase()]: false }
-      }));
+      // Reset special key states on key up
+      if (e.key === 'Enter') {
+        setInputState(prev => ({
+          ...prev,
+          keys: { ...prev.keys, [e.key.toLowerCase()]: false },
+          enterPressed: false
+        }));
+      } else if (e.key === ' ') {
+        setInputState(prev => ({
+          ...prev,
+          keys: { ...prev.keys, [e.key.toLowerCase()]: false },
+          spacePressed: false
+        }));
+      } else {
+        setInputState(prev => ({
+          ...prev,
+          keys: { ...prev.keys, [e.key.toLowerCase()]: false }
+        }));
+      }
     };
     
     const handleMouseMove = (e: MouseEvent) => {

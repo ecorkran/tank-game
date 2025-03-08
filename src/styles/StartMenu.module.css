@@ -68,3 +68,10 @@
 .startButton:hover {
   background-color: #45a049;
 }
+
+.hint {
+  color: #fff;
+  margin-top: 15px;
+  font-size: 16px;
+  text-align: center;
+}

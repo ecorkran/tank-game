@@ -41,6 +41,11 @@ export interface PowerUp extends GameObject {
   isActive: boolean;
 }
 
+export enum ControlType {
+  Keyboard = 'keyboard',
+  Mouse = 'mouse'
+}
+
 export interface GameState {
   player: Tank;
   enemies: Tank[];
@@ -55,4 +60,5 @@ export interface GameState {
     shield: boolean;
     rapidFire: boolean;
   };
+  controlType: ControlType;
 }

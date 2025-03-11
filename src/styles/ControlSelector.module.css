@@ -1,0 +1,39 @@
+.container {
+  text-align: center;
+  padding: 2rem;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 10px;
+  border: 2px solid #007bff;
+  max-width: 600px;
+  margin: 2rem auto;
+}
+
+.buttons {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 2rem;
+}
+
+.button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.button:hover {
+  background: #0056b3;
+  transform: scale(1.05);
+}
+
+.button span {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}

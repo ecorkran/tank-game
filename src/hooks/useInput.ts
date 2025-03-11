@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface InputState {
   keys: {
@@ -38,6 +38,32 @@ export const useInput = () => {
       spacePressed: false
     });
   };
+  
+  const throttle = useCallback((func, limit) => {
+    let lastFunc;
+    let lastRan;
+    return function(...args) {
+      if (!lastRan) {
+        func(...args);
+        lastRan = Date.now();
+      } else {
+        clearTimeout(lastFunc);
+        lastFunc = setTimeout(function() {
+          if ((Date.now() - lastRan) >= limit) {
+            func(...args);
+            lastRan = Date.now();
+          }
+        }, limit - (Date.now() - lastRan));
+      }
+    };
+  }, []);
+  
+  const handleMouseMove = useCallback(throttle((e: MouseEvent) => {
+    setInputState(prev => ({
+      ...prev,
+      mousePosition: { x: e.clientX, y: e.clientY }
+    }));
+  }, 100), []); // Throttle to 100ms
   
   useEffect(() => {
     // Don't run on server
@@ -87,13 +113,6 @@ export const useInput = () => {
       }
     };
     
-    const handleMouseMove = (e: MouseEvent) => {
-      setInputState(prev => ({
-        ...prev,
-        mousePosition: { x: e.clientX, y: e.clientY }
-      }));
-    };
-    
     const handleMouseDown = (e: MouseEvent) => {
       setInputState(prev => ({
         ...prev,
@@ -123,7 +142,7 @@ export const useInput = () => {
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, []);
+  }, [handleMouseMove]);
   
   return { ...inputState, resetInput };
 };

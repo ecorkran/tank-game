@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import ControlSelector from './ControlSelector';  
+
+import React, { useEffect, useState } from 'react';
 import styles from '@/styles/StartMenu.module.css';
 import { useInput } from '@/hooks/useInput';
+import { ControlType } from '@/types/game';
 
 interface StartMenuProps {
-  onStartGame: () => void;
+  onStartGame: (controlType: ControlType) => void;
   highScore: number;
 }
 
@@ -16,13 +19,33 @@ const StartMenu: React.FC<StartMenuProps> = ({ onStartGame, highScore }) => {
   // Handle Enter key or Space bar press to start the game
   useEffect(() => {
     if (inputState.enterPressed || inputState.spacePressed) {
-      onStartGame();
+      onStartGame(ControlType.Keyboard); // default control type
     }
   }, [inputState.enterPressed, inputState.spacePressed, onStartGame]);
   
+  const [controlType, setControlType] = useState<ControlType | null>(null);
+
   return (
     <div className={styles.startMenu}>
       <h1 className={styles.title}>MANTA'S TANK BATTLE</h1>
+      <div className={styles.startButtonContainer}>
+        <button 
+          className={styles.battleButton}
+          onClick={() => onStartGame(controlType || ControlType.Keyboard)}
+        >
+          Battle
+        </button>
+      </div>
+      
+      {!controlType && (
+        <ControlSelector onSelect={setControlType} />
+      )}
+      
+      {highScore > 0 && (
+        <div className={styles.highScore}>
+          High Score: {highScore}
+        </div>
+      )}
       
       <div className={styles.instructions}>
         <h2>How to Play</h2>
@@ -35,19 +58,18 @@ const StartMenu: React.FC<StartMenuProps> = ({ onStartGame, highScore }) => {
         </ul>
       </div>
       
-      {highScore > 0 && (
-        <div className={styles.highScore}>
-          High Score: {highScore}
-        </div>
+      {controlType && (
+        <>
+          <p>Selected controls: {controlType}</p>
+          <button 
+            className={styles.startButton}
+            onClick={() => onStartGame(controlType)}
+          >
+            Start Game
+          </button>
+          <p className={styles.hint}>Press <strong>Enter</strong>, <strong>Space</strong>, or click the button to start</p>
+        </>
       )}
-      
-      <button 
-        className={styles.startButton}
-        onClick={onStartGame}
-      >
-        Start Game
-      </button>
-      <p className={styles.hint}>Press <strong>Enter</strong>, <strong>Space</strong>, or click the button to start</p>
     </div>
   );
 };

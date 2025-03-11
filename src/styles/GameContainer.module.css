@@ -4,3 +4,64 @@
   overflow: hidden;
   position: relative;
 }
+
+.dialogOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 20;
+}
+
+.dialog {
+  background-color: #111;
+  padding: 20px 40px;
+  border-radius: 15px;
+  box-shadow: 0 0 10px #000;
+  text-align: center;
+}
+
+.dialog h2 {
+  color: #fff;
+  margin-bottom: 20px;
+}
+
+.dialog button {
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 15px 30px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 18px;
+  margin: 10px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background-color 0.3s;
+}
+
+.dialog .exitButton {
+  background-color: #FF6347;
+}
+
+.dialog .exitButton:hover {
+  background-color: #FF4500;
+}
+
+.dialog .controlButton {
+  background-color: #2196F3;
+}
+
+.dialog .controlButton:hover {
+  background-color: #1976D2;
+}
+
+.dialog button:hover {
+  background-color: #45a049;
+}

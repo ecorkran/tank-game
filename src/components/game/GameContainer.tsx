@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Canvas from './Canvas';
 import StartMenu from './StartMenu';
-import { GameState, Tank, Projectile, GameObject, PowerUpType, Position } from '@/types/game';
+import { GameState, Tank, Projectile, GameObject, PowerUpType, Position, ControlType } from '@/types/game';
 import { useInput } from '@/hooks/useInput';
 import { createEnemy, updateEnemy } from '@/lib/enemies';
 import { generateObstacles } from '@/lib/obstacles';
@@ -16,6 +16,7 @@ import styles from '@/styles/GameContainer.module.css';
 
 // Initial game state
 const initialGameState: GameState = {
+  controlType: ControlType.Keyboard,
   player: {
     position: { x: 100, y: 100 },
     rotation: 0,
@@ -63,6 +64,19 @@ const drawControlsText = (ctx: CanvasRenderingContext2D, width: number, height: 
   ctx.fillText('Space/Click - Fire', width - 90, height - 75);
 };
 
+const EscapeMenu: React.FC<{ onClose: () => void, onMainMenu: () => void }> = ({ onClose, onMainMenu }) => {
+  return (
+    <div className={styles.dialogOverlay}>
+      <div className={styles.dialog}>
+        <h2>Pause Menu</h2>
+        <button className={styles.controlButton} onClick={onMainMenu}>Main Menu</button>
+        <button className={styles.exitButton} onClick={() => window.close()}>Exit</button>
+        <button onClick={onClose}>Resume</button>
+      </div>
+    </div>
+  );
+};
+
 const GameContainer: React.FC = () => {
   // Game state
   const [gameState, setGameState] = useState<GameState>(initialGameState);
@@ -72,10 +86,38 @@ const GameContainer: React.FC = () => {
   // Track enemy speed increase as the game progresses
   const [enemySpeedIncrease, setEnemySpeedIncrease] = useState<number>(0);
   const [highScore, setHighScore] = useState<number>(0);
-  
-  // Fixed dimensions to prevent hydration mismatch
-  const [dimensions, setDimensions] = useState(PLAYFIELD_DIMENSIONS);
-  
+  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+
+  // Set the playfield size to the window size and update it on resize
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      setDimensions({ width: window.innerWidth, height: window.innerHeight });
+    };
+
+    if (typeof window !== 'undefined') {
+      updateDimensions();
+      window.addEventListener('resize', updateDimensions);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', updateDimensions);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (gameScreen === 'playing') {
+      const newObstacles = generateObstacles(dimensions.width, dimensions.height, 8);
+      setGameState(prevState => ({
+        ...prevState,
+        obstacles: newObstacles
+      }));
+    }
+  }, [dimensions, gameScreen]);
+
   // Input handling
   const inputState = useInput();
   
@@ -85,33 +127,6 @@ const GameContainer: React.FC = () => {
       handleRestartGame();
     }
   }, [gameScreen, inputState.enterPressed, inputState.spacePressed]);
-  
-  // Handle window resize - now using fixed dimensions to avoid hydration issues
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    // Only adjust dimensions if window is smaller than our default
-    const handleResize = () => {
-      const maxWidth = Math.min(PLAYFIELD_DIMENSIONS.width, window.innerWidth - 20);
-      const maxHeight = Math.min(PLAYFIELD_DIMENSIONS.height, window.innerHeight - 20);
-      
-      if (maxWidth !== dimensions.width || maxHeight !== dimensions.height) {
-        setDimensions({
-          width: maxWidth,
-          height: maxHeight
-        });
-      }
-    };
-    
-    // Run once on mount to set correct initial size
-    handleResize();
-    
-    window.addEventListener('resize', handleResize);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
   
   // Load high score from localStorage
   useEffect(() => {
@@ -979,7 +994,26 @@ const GameContainer: React.FC = () => {
       clearInterval(gameLoop);
     };
   }, [gameScreen, inputState, dimensions]);
-  
+
+  const handleEscapePress = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setIsMenuOpen(prev => !prev);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleEscapePress);
+    return () => {
+      window.removeEventListener('keydown', handleEscapePress);
+    };
+  }, [handleEscapePress]);
+
+  const handleMainMenu = () => {
+    setGameState(initialGameState);
+    setGameScreen('start');
+    setIsMenuOpen(false);
+  };
+
   // Drawing function for canvas
   const draw = useCallback((ctx: CanvasRenderingContext2D, frameCount: number) => {
     // Clear the canvas
@@ -1312,6 +1346,9 @@ const GameContainer: React.FC = () => {
   
   return (
     <div className={styles.gameContainer}>
+      {gameScreen === 'playing' && isMenuOpen && (
+        <EscapeMenu onClose={() => setIsMenuOpen(false)} onMainMenu={handleMainMenu} />
+      )}
       <Canvas 
         draw={draw} 
         width={dimensions.width} 

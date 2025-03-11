@@ -91,6 +91,18 @@ const GameContainer: React.FC = () => {
   // Set the playfield size to the window size and update it on resize
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
+  const debounce = (func: (...args: any[]) => void, delay: number) => {
+    let timeoutId: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        func(...args);
+      }, delay);
+    };
+  };
+
+  let debouncedResizeHandler: () => void;
+
   useEffect(() => {
     const updateDimensions = () => {
       setDimensions({ width: window.innerWidth, height: window.innerHeight });
@@ -98,24 +110,45 @@ const GameContainer: React.FC = () => {
 
     if (typeof window !== 'undefined') {
       updateDimensions();
-      window.addEventListener('resize', updateDimensions);
+      debouncedResizeHandler = debounce(() => {
+        updateDimensions();
+      }, 300); // 300ms delay
+      window.addEventListener('resize', debouncedResizeHandler);
     }
 
     return () => {
       if (typeof window !== 'undefined') {
-        window.removeEventListener('resize', updateDimensions);
+        window.removeEventListener('resize', debouncedResizeHandler);
       }
     };
   }, []);
 
   useEffect(() => {
-    if (gameScreen === 'playing') {
-      const newObstacles = generateObstacles(dimensions.width, dimensions.height, 8);
-      setGameState(prevState => ({
-        ...prevState,
-        obstacles: newObstacles
-      }));
+    // Only create a resize handler for obstacle regeneration
+    // Do not call it immediately
+    const handleResize = () => {
+      if (gameScreen === 'playing') {
+        const newObstacles = generateObstacles(dimensions.width, dimensions.height, 8);
+        setGameState(prevState => ({
+          ...prevState,
+          obstacles: newObstacles
+        }));
+      }
+    };
+
+    // Create the debounced version
+    const debouncedObstacleRegeneration = debounce(handleResize, 300);
+
+    // Only add the event listener if we're in the playing state
+    if (typeof window !== 'undefined' && gameScreen === 'playing') {
+      window.addEventListener('resize', debouncedObstacleRegeneration);
     }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', debouncedObstacleRegeneration);
+      }
+    };
   }, [dimensions, gameScreen]);
 
   // Input handling

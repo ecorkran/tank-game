@@ -27,6 +27,7 @@
   flex-direction: column;
   gap: 0.5rem;
   box-sizing: border-box;
+  text-align: center;
 }
 
 .button:hover {

@@ -29,7 +29,7 @@ export const WRAPPING_THRESHOLDS = {
 
 export const GAMEPLAY = {
   // Player constants
-  PLAYER_SPEED: 2.5,  // Increased from 1.5 to make it more noticeable
+  PLAYER_SPEED: 2.75,  // Increased from 1.5 to make it more noticeable
   PLAYER_ROTATION_SPEED: 0.08,
   
   // Enemy spawning
@@ -39,8 +39,8 @@ export const GAMEPLAY = {
   MIN_ENEMIES: 2,       // Minimum number of enemies to maintain
   
   // Enemy movement
-  ENEMY_SPEED_MIN: 0.20,  // Starting minimum speed (slower than player)
-  ENEMY_SPEED_MAX: 0.80,  // Starting maximum speed (slower than player)
+  ENEMY_SPEED_MIN: 0.30,  // Starting minimum speed (slower than player)
+  ENEMY_SPEED_MAX: 0.90,  // Starting maximum speed (slower than player)
   ENEMY_ROTATION_SPEED: 0.02,
   ENEMY_ROTATION_RANDOMNESS: 0.2,  // Rotation speed randomness factor (±20%)
   
@@ -60,7 +60,7 @@ export const GAMEPLAY = {
   SHOT_RANGE: 600,
 
   // Power-up spawning
-  POWERUP_INTERVAL_MIN: 6000,  // Minimum time between power-up spawns (ms)
+  POWERUP_INTERVAL_MIN: 5000,  // Minimum time between power-up spawns (ms)
   POWERUP_INTERVAL_MAX: 12000,  // Maximum time between power-up spawns (ms)
   MAX_ACTIVE_POWERUPS: 3,      // Maximum number of active power-ups at once
 

@@ -20,13 +20,13 @@ const StartMenu: React.FC<StartMenuProps> = ({ onStartGame, highScore, initialCo
   
   // Set control type when component mounts, using initialControlType if provided
   useEffect(() => {
-    setControlType(initialControlType || ControlType.Keyboard);
+    setControlType(initialControlType || ControlType.Mouse);
   }, [initialControlType]);
 
   // Handle Enter key or Space bar press to start the game
   useEffect(() => {
     if (inputState.enterPressed || inputState.spacePressed) {
-      onStartGame(controlType || ControlType.Keyboard);
+      onStartGame(controlType || ControlType.Mouse);
     }
   }, [inputState.enterPressed, inputState.spacePressed, onStartGame, controlType]);
 
@@ -36,7 +36,7 @@ const StartMenu: React.FC<StartMenuProps> = ({ onStartGame, highScore, initialCo
       <div className={styles.startButtonContainer}>
         <button 
           className={styles.battleButton}
-          onClick={() => onStartGame(controlType || ControlType.Keyboard)}
+          onClick={() => onStartGame(controlType || ControlType.Mouse)}
         >
           Battle
         </button>

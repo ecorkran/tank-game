@@ -16,7 +16,7 @@ import styles from '@/styles/GameContainer.module.css';
 
 // Initial game state
 const initialGameState: GameState = {
-  controlType: ControlType.Keyboard,
+  controlType: ControlType.Mouse,
   player: {
     position: { x: 100, y: 100 },
     rotation: 0,

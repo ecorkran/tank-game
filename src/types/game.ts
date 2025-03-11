@@ -61,4 +61,5 @@ export interface GameState {
     rapidFire: boolean;
   };
   controlType: ControlType;
+  debug?: boolean; // Optional debug flag for development
 }

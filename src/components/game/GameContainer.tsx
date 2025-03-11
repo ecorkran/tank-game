@@ -185,7 +185,7 @@ const GameContainer: React.FC = () => {
   }, [gameScreen]);
   
   // Handle game start
-  const handleStartGame = () => {
+  const handleStartGame = (controlType: ControlType = ControlType.Keyboard) => {
     // Reset game state with new obstacles
     const newObstacles = generateObstacles(dimensions.width, dimensions.height, 8);
     
@@ -230,7 +230,8 @@ const GameContainer: React.FC = () => {
       },
       obstacles: newObstacles,
       enemies: initialEnemies,
-      projectiles: []  // Ensure projectiles are cleared
+      projectiles: [],  // Ensure projectiles are cleared
+      controlType: controlType  // Set the control type from parameter
     });
     
     setGameScreen('playing');
@@ -251,6 +252,9 @@ const GameContainer: React.FC = () => {
   
   // Handle restart game
   const handleRestartGame = () => {
+    // Store the current control type before resetting
+    const currentControlType = gameState.controlType;
+    
     // Clear any existing projectiles and reset game state
     setGameState(prevState => ({
       ...prevState,
@@ -263,7 +267,8 @@ const GameContainer: React.FC = () => {
     // Add a small delay before starting a new game to prevent immediate firing
     setTimeout(() => {
       // Start a new game directly instead of going back to the start screen
-      handleStartGame();
+      // Pass the current control type to preserve it
+      handleStartGame(currentControlType);
     }, 100);  // 100ms delay
   };
   
@@ -445,21 +450,100 @@ const GameContainer: React.FC = () => {
         const newState = { ...prevState };
         
         // Player movement and rotation
-        const { keys, mousePosition } = inputState;
+        const { keys, mousePosition, mouseDown, rightMouseDown } = inputState;
         const player = { ...newState.player };
         
         // Calculate movement direction based on tank's rotation
         let dx = 0;
         let dy = 0;
         
-        // Forward and backward movement relative to tank rotation
-        if (keys['w'] || keys['arrowup']) {
-          dx += Math.cos(player.rotation) * player.speed * newState.powerUpEffects.speed;
-          dy += Math.sin(player.rotation) * player.speed * newState.powerUpEffects.speed;
-        }
-        if (keys['s'] || keys['arrowdown']) {
-          dx -= Math.cos(player.rotation) * player.speed * newState.powerUpEffects.speed;
-          dy -= Math.sin(player.rotation) * player.speed * newState.powerUpEffects.speed;
+        // Handle controls based on control type
+        if (newState.controlType === ControlType.Keyboard) {
+          // KEYBOARD CONTROLS
+          
+          // Forward and backward movement relative to tank rotation
+          if (keys['w'] || keys['arrowup']) {
+            dx += Math.cos(player.rotation) * player.speed * newState.powerUpEffects.speed;
+            dy += Math.sin(player.rotation) * player.speed * newState.powerUpEffects.speed;
+          }
+          if (keys['s'] || keys['arrowdown']) {
+            dx -= Math.cos(player.rotation) * player.speed * newState.powerUpEffects.speed;
+            dy -= Math.sin(player.rotation) * player.speed * newState.powerUpEffects.speed;
+          }
+          
+          // Rotation controls
+          if (keys['a'] || keys['arrowleft']) {
+            player.rotation -= player.rotationSpeed;
+          }
+          if (keys['d'] || keys['arrowright']) {
+            player.rotation += player.rotationSpeed;
+          }
+        } else {
+          // MOUSE CONTROLS
+          
+          // Convert mouse position from screen coordinates to game coordinates
+          // Get the canvas element's bounding rectangle
+          const canvas = document.querySelector('canvas');
+          if (canvas) {
+            const rect = canvas.getBoundingClientRect();
+            
+            // Calculate mouse position relative to the canvas
+            const gameMouseX = mousePosition.x - rect.left;
+            const gameMouseY = mousePosition.y - rect.top;
+            
+            // Calculate angle between tank and mouse cursor
+            const centerX = player.position.x + player.width / 2;
+            const centerY = player.position.y + player.height / 2;
+            
+            // Calculate angle between tank center and mouse position
+            const angleToMouse = Math.atan2(
+              gameMouseY - centerY,
+              gameMouseX - centerX
+            );
+            
+            // Debug info
+            if (newState.debug) {
+              console.log('Mouse Controls:', {
+                screenMouse: { x: mousePosition.x, y: mousePosition.y },
+                gameMouse: { x: gameMouseX, y: gameMouseY },
+                tankCenter: { x: centerX, y: centerY },
+                angle: angleToMouse
+              });
+            }
+            
+            // Instead of instantly setting rotation to mouse angle,
+            // we'll gradually rotate toward it at the tank's normal rotation speed
+            
+            // Calculate the shortest angle difference (accounting for 2π wrapping)
+            let angleDiff = angleToMouse - player.rotation;
+            
+            // Normalize the angle difference to be between -π and π
+            while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+            while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+            
+            // Limit rotation speed to the tank's normal rotation speed
+            const maxRotation = player.rotationSpeed;
+            
+            if (Math.abs(angleDiff) <= maxRotation) {
+              // If we're close enough, just set to the target angle
+              player.rotation = angleToMouse;
+            } else {
+              // Otherwise, move toward the target angle at the max rotation speed
+              player.rotation += Math.sign(angleDiff) * maxRotation;
+            }
+          }
+          
+          // Move forward when left mouse button is held
+          if (mouseDown) {
+            dx += Math.cos(player.rotation) * player.speed * newState.powerUpEffects.speed;
+            dy += Math.sin(player.rotation) * player.speed * newState.powerUpEffects.speed;
+          }
+          
+          // Move backward when right mouse button is held
+          if (rightMouseDown) {
+            dx -= Math.cos(player.rotation) * player.speed * newState.powerUpEffects.speed;
+            dy -= Math.sin(player.rotation) * player.speed * newState.powerUpEffects.speed;
+          }
         }
         
         // Test keys for screen edge teleportation to test wrapping
@@ -487,14 +571,6 @@ const GameContainer: React.FC = () => {
           dx *= 5;
           dy *= 5;
           console.log("Speed boost active");
-        }
-        
-        // Rotation controls
-        if (keys['a'] || keys['arrowleft']) {
-          player.rotation -= player.rotationSpeed;
-        }
-        if (keys['d'] || keys['arrowright']) {
-          player.rotation += player.rotationSpeed;
         }
         
         // Check obstacle collisions
@@ -1018,7 +1094,8 @@ const GameContainer: React.FC = () => {
           projectiles: updatedProjectiles,
           obstacles: updatedObstacles,
           powerUps: updatedPowerUps,
-          powerUpEffects: updatedPowerUpEffects
+          powerUpEffects: updatedPowerUpEffects,
+          controlType: newState.controlType // Preserve the control type
         };
       });
     }, 1000 / GAMEPLAY.GAME_FPS); // Game loop at specified FPS
@@ -1042,7 +1119,15 @@ const GameContainer: React.FC = () => {
   }, [handleEscapePress]);
 
   const handleMainMenu = () => {
-    setGameState(initialGameState);
+    // Store the current control type before resetting
+    const currentControlType = gameState.controlType;
+    
+    // Reset game state but preserve control type
+    setGameState({
+      ...initialGameState,
+      controlType: currentControlType
+    });
+    
     setGameScreen('start');
     setIsMenuOpen(false);
   };
@@ -1390,7 +1475,11 @@ const GameContainer: React.FC = () => {
       />
       
       {gameScreen === 'start' && (
-        <StartMenu onStartGame={handleStartGame} highScore={highScore} />
+        <StartMenu 
+          onStartGame={handleStartGame} 
+          highScore={highScore} 
+          initialControlType={gameState.controlType} 
+        />
       )}
     </div>
   );

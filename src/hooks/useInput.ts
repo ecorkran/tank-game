@@ -11,6 +11,7 @@ interface InputState {
     y: number;
   };
   mouseDown: boolean;
+  rightMouseDown: boolean;
   enterPressed: boolean;
   spacePressed: boolean;
 }
@@ -24,6 +25,7 @@ export const useInput = () => {
     keys: {},
     mousePosition: { x: 0, y: 0 },
     mouseDown: false,
+    rightMouseDown: false,
     enterPressed: false,
     spacePressed: false
   });
@@ -34,26 +36,27 @@ export const useInput = () => {
       keys: {},
       mousePosition: { x: 0, y: 0 },
       mouseDown: false,
+      rightMouseDown: false,
       enterPressed: false,
       spacePressed: false
     });
   };
   
-  const throttle = useCallback((func, limit) => {
-    let lastFunc;
-    let lastRan;
-    return function(...args) {
+  const throttle = useCallback(<T extends (...args: any[]) => void>(func: T, limit: number) => {
+    let lastFunc: ReturnType<typeof setTimeout> | undefined;
+    let lastRan: number | undefined;
+    return function(this: any, ...args: Parameters<T>) {
       if (!lastRan) {
         func(...args);
         lastRan = Date.now();
       } else {
         clearTimeout(lastFunc);
         lastFunc = setTimeout(function() {
-          if ((Date.now() - lastRan) >= limit) {
+          if (lastRan && (Date.now() - lastRan) >= limit) {
             func(...args);
             lastRan = Date.now();
           }
-        }, limit - (Date.now() - lastRan));
+        }, lastRan ? limit - (Date.now() - lastRan) : limit);
       }
     };
   }, []);
@@ -114,17 +117,31 @@ export const useInput = () => {
     };
     
     const handleMouseDown = (e: MouseEvent) => {
-      setInputState(prev => ({
-        ...prev,
-        mouseDown: true
-      }));
+      if (e.button === 0) { // Left mouse button
+        setInputState(prev => ({
+          ...prev,
+          mouseDown: true
+        }));
+      } else if (e.button === 2) { // Right mouse button
+        setInputState(prev => ({
+          ...prev,
+          rightMouseDown: true
+        }));
+      }
     };
     
     const handleMouseUp = (e: MouseEvent) => {
-      setInputState(prev => ({
-        ...prev,
-        mouseDown: false
-      }));
+      if (e.button === 0) { // Left mouse button
+        setInputState(prev => ({
+          ...prev,
+          mouseDown: false
+        }));
+      } else if (e.button === 2) { // Right mouse button
+        setInputState(prev => ({
+          ...prev,
+          rightMouseDown: false
+        }));
+      }
     };
     
     // Add event listeners

@@ -10,20 +10,25 @@ import { ControlType } from '@/types/game';
 interface StartMenuProps {
   onStartGame: (controlType: ControlType) => void;
   highScore: number;
+  initialControlType?: ControlType; // Optional prop to set initial control type
 }
 
-const StartMenu: React.FC<StartMenuProps> = ({ onStartGame, highScore }) => {
+const StartMenu: React.FC<StartMenuProps> = ({ onStartGame, highScore, initialControlType }) => {
   // Use the input hook to detect Enter key press
   const inputState = useInput();
+  const [controlType, setControlType] = useState<ControlType | null>(null);
   
+  // Set control type when component mounts, using initialControlType if provided
+  useEffect(() => {
+    setControlType(initialControlType || ControlType.Keyboard);
+  }, [initialControlType]);
+
   // Handle Enter key or Space bar press to start the game
   useEffect(() => {
     if (inputState.enterPressed || inputState.spacePressed) {
-      onStartGame(ControlType.Keyboard); // default control type
+      onStartGame(controlType || ControlType.Keyboard);
     }
-  }, [inputState.enterPressed, inputState.spacePressed, onStartGame]);
-  
-  const [controlType, setControlType] = useState<ControlType | null>(null);
+  }, [inputState.enterPressed, inputState.spacePressed, onStartGame, controlType]);
 
   return (
     <div className={styles.startMenu}>
@@ -37,7 +42,7 @@ const StartMenu: React.FC<StartMenuProps> = ({ onStartGame, highScore }) => {
         </button>
       </div>
       
-      <ControlSelector onSelect={setControlType} />
+      <ControlSelector onSelect={setControlType} selectedType={controlType} />
       
       <div className={styles.highScore}>
         High Score: {highScore}

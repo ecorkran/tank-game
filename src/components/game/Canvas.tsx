@@ -36,6 +36,11 @@ const Canvas: React.FC<CanvasProps> = ({ draw, width, height, onClick }) => {
     };
   }, [draw]);
   
+  // Prevent the context menu from showing on right-click
+  const handleContextMenu = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+  };
+
   return (
     <canvas 
       ref={canvasRef}
@@ -43,6 +48,7 @@ const Canvas: React.FC<CanvasProps> = ({ draw, width, height, onClick }) => {
       height={height || 600}
       className={styles.canvas}
       onClick={onClick}
+      onContextMenu={handleContextMenu}
     />
   );
 };

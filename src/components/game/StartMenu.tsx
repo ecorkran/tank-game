@@ -37,15 +37,11 @@ const StartMenu: React.FC<StartMenuProps> = ({ onStartGame, highScore }) => {
         </button>
       </div>
       
-      {!controlType && (
-        <ControlSelector onSelect={setControlType} />
-      )}
+      <ControlSelector onSelect={setControlType} />
       
-      {highScore > 0 && (
-        <div className={styles.highScore}>
-          High Score: {highScore}
-        </div>
-      )}
+      <div className={styles.highScore}>
+        High Score: {highScore}
+      </div>
       
       <div className={styles.instructions}>
         <h2>How to Play</h2>
@@ -58,18 +54,7 @@ const StartMenu: React.FC<StartMenuProps> = ({ onStartGame, highScore }) => {
         </ul>
       </div>
       
-      {controlType && (
-        <>
-          <p>Selected controls: {controlType}</p>
-          <button 
-            className={styles.startButton}
-            onClick={() => onStartGame(controlType)}
-          >
-            Start Game
-          </button>
-          <p className={styles.hint}>Press <strong>Enter</strong>, <strong>Space</strong>, or click the button to start</p>
-        </>
-      )}
+
     </div>
   );
 };

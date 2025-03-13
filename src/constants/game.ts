@@ -60,8 +60,8 @@ export const GAMEPLAY = {
   SHOT_RANGE: 600,
 
   // Power-up spawning
-  POWERUP_INTERVAL_MIN: 5000,  // Minimum time between power-up spawns (ms)
-  POWERUP_INTERVAL_MAX: 12000,  // Maximum time between power-up spawns (ms)
+  POWERUP_INTERVAL_MIN: 4000,  // Minimum time between power-up spawns (ms)
+  POWERUP_INTERVAL_MAX: 9000,  // Maximum time between power-up spawns (ms)
   MAX_ACTIVE_POWERUPS: 3,      // Maximum number of active power-ups at once
 
   // Game loop
